@@ -25,6 +25,10 @@ func TestFromFloat32(t *testing.T) {
 		{0x1.ffcp+15, 0x7bff}, // largest normal number
 		{float32(negZero), 0x8000},
 		{-2, 0xc000},
+
+		// infinities
+		{float32(math.Inf(1)), 0x7c00},
+		{float32(math.Inf(-1)), 0xfc00},
 	}
 	for _, tt := range tests {
 		r := FromFloat32(tt.f)
@@ -40,17 +44,21 @@ func TestFromFloat64(t *testing.T) {
 		r Float16
 	}{
 		// from https://en.wikipedia.org/wiki/Half-precision_floating-point_format
-		// {0, 0x0000},
+		{0, 0x0000},
 		{0x1p-24, 0x0001},     // smallest positive subnormal number
-		{0x1.ff8p-24, 0x03ff}, // largest positive subnormal number
+		{0x1.ff8p-15, 0x03ff}, // largest positive subnormal number
 		{0x1p-14, 0x0400},     // smallest positive normal number
 		{0x1.554p-02, 0x3555}, // nearest value to 1/3
 		{0x1.ffcp-01, 0x3bff}, // largest number less than one
 		{0x1p+00, 0x3c00},     // one
 		{0x1.004p+00, 0x3c01}, // smallest number larger than one
 		{0x1.ffcp+15, 0x7bff}, // largest normal number
-		// {-0, 0x8000},
+		{negZero, 0x8000},
 		{-2, 0xc000},
+
+		// infinities
+		{math.Inf(1), 0x7c00},
+		{math.Inf(-1), 0xfc00},
 	}
 	for _, tt := range tests {
 		r := FromFloat64(tt.f)
@@ -104,12 +112,12 @@ func TestFloat32_Specials(t *testing.T) {
 	}
 
 	// zero
-	if r := Float16(0x0000).Float32(); !math.IsInf(float64(1/r), 1) {
+	if r := Float16(0x0000).Float32(); r != 0 || !math.IsInf(float64(1/r), 1) {
 		t.Errorf("expected +0, got %x", r)
 	}
 
 	// negative zero
-	if r := Float16(0x8000).Float32(); !math.IsInf(float64(1/r), -1) {
+	if r := Float16(0x8000).Float32(); r != 0 || !math.IsInf(float64(1/r), -1) {
 		t.Errorf("expected -0, got %x", r)
 	}
 }
@@ -165,12 +173,12 @@ func TestFloat64_Specials(t *testing.T) {
 	}
 
 	// zero
-	if r := Float16(0x0000).Float64(); !math.IsInf(1/r, 1) {
+	if r := Float16(0x0000).Float64(); r != 0 || !math.IsInf(1/r, 1) {
 		t.Errorf("expected +0, got %x", r)
 	}
 
 	// negative zero
-	if r := Float16(0x8000).Float64(); !math.IsInf(1/r, -1) {
+	if r := Float16(0x8000).Float64(); r != 0 || !math.IsInf(1/r, -1) {
 		t.Errorf("expected -0, got %x", r)
 	}
 }

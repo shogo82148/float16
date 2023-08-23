@@ -56,13 +56,15 @@ func FromBits(b uint16) Float16 {
 	return Float16(b)
 }
 
+// FromFloat32 returns the floating point number corresponding
+// to the IEEE 754 binary representation of f.
 func FromFloat32(f float32) Float16 {
 	b := math.Float32bits(f)
 	sign := uint16((b & signMask32) >> (32 - 16))
-	exp := int((b>>shift32)&mask32) - bias32
-	frac := (b & fracMask32) | (1 << shift32)
+	exp := int((b >> shift32) & mask32)
+	frac := b & fracMask32
 
-	if exp == mask32-bias32 {
+	if exp == mask32 {
 		if frac == 0 {
 			// infinity or negative infinity
 			return Float16(sign | (mask16 << shift16))
@@ -71,6 +73,9 @@ func FromFloat32(f float32) Float16 {
 			return Float16(uvnan)
 		}
 	}
+
+	exp -= bias32
+	frac |= 1 << shift32
 
 	if exp <= -bias16 {
 		// subnormal number
@@ -86,10 +91,10 @@ func FromFloat32(f float32) Float16 {
 func FromFloat64(f float64) Float16 {
 	b := math.Float64bits(f)
 	sign := uint16((b & signMask64) >> (64 - 16))
-	exp := int((b>>shift64)&mask64) - bias64
-	frac := (b & fracMask64) | (1 << shift64)
+	exp := int((b >> shift64) & mask64)
+	frac := b & fracMask64
 
-	if exp == mask64-bias64 {
+	if exp == mask64 {
 		if frac == 0 {
 			// infinity or negative infinity
 			return Float16(sign | (mask16 << shift16))
@@ -99,9 +104,12 @@ func FromFloat64(f float64) Float16 {
 		}
 	}
 
-	if exp < -bias16 {
+	exp -= bias64
+	frac |= 1 << shift64
+
+	if exp <= -bias16 {
 		// subnormal number
-		return Float16(sign)
+		return Float16(sign | uint16(frac>>(-exp+28)))
 	}
 
 	// normal number
