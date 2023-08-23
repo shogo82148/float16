@@ -62,9 +62,9 @@ func FromFloat32(f float32) Float16 {
 	b := math.Float32bits(f)
 	sign := uint16((b & signMask32) >> (32 - 16))
 	exp := int((b >> shift32) & mask32)
-	frac := b & fracMask32
 
 	if exp == mask32 {
+		frac := b & fracMask32
 		if frac == 0 {
 			// infinity or negative infinity
 			return Float16(sign | (mask16 << shift16))
@@ -75,16 +75,27 @@ func FromFloat32(f float32) Float16 {
 	}
 
 	exp -= bias32
-	frac |= 1 << shift32
 
 	if exp <= -bias16 {
-		// subnormal number
+		// handle subnormal number
+		frac := (b & fracMask32) | (1 << shift32)
+		halfMinusULP := uint32(mask32) >> (-exp - 1)
+		frac += halfMinusULP + (frac >> (-exp - 1) & 1)
 		return Float16(sign | uint16(frac>>(-exp-1)))
 	}
 
-	// normal number
-	exp16 := uint16(exp + bias16)
-	frac16 := uint16(frac>>(shift32-shift16)) & fracMask16
+	// handle normal number
+
+	// round to nearest even
+	const halfMinusULP = (1 << (shift32 - shift16 - 1)) - 1
+	b += halfMinusULP + (b >> (shift32 - shift16) & 1)
+
+	exp16 := uint16((b>>shift32)&mask32) - bias32 + bias16
+	if exp16 >= mask16 {
+		// overflow
+		return Float16(sign | (mask16 << shift16))
+	}
+	frac16 := uint16(b>>(shift32-shift16)) & fracMask16
 	return Float16(sign | (exp16 << shift16) | frac16)
 }
 
