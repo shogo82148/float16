@@ -6,6 +6,60 @@ import (
 	"testing"
 )
 
+var negZero = math.Float64frombits(1 << 63)
+
+func TestFromFloat32(t *testing.T) {
+	tests := []struct {
+		f float32
+		r Float16
+	}{
+		// from https://en.wikipedia.org/wiki/Half-precision_floating-point_format
+		{0, 0x0000},
+		{0x1p-24, 0x0001},     // smallest positive subnormal number
+		{0x1.ff8p-15, 0x03ff}, // largest positive subnormal number
+		{0x1p-14, 0x0400},     // smallest positive normal number
+		{0x1.554p-02, 0x3555}, // nearest value to 1/3
+		{0x1.ffcp-01, 0x3bff}, // largest number less than one
+		{0x1p+00, 0x3c00},     // one
+		{0x1.004p+00, 0x3c01}, // smallest number larger than one
+		{0x1.ffcp+15, 0x7bff}, // largest normal number
+		{float32(negZero), 0x8000},
+		{-2, 0xc000},
+	}
+	for _, tt := range tests {
+		r := FromFloat32(tt.f)
+		if r != tt.r {
+			t.Errorf("expected %x, got %x", tt.r, r)
+		}
+	}
+}
+
+func TestFromFloat64(t *testing.T) {
+	tests := []struct {
+		f float64
+		r Float16
+	}{
+		// from https://en.wikipedia.org/wiki/Half-precision_floating-point_format
+		// {0, 0x0000},
+		{0x1p-24, 0x0001},     // smallest positive subnormal number
+		{0x1.ff8p-24, 0x03ff}, // largest positive subnormal number
+		{0x1p-14, 0x0400},     // smallest positive normal number
+		{0x1.554p-02, 0x3555}, // nearest value to 1/3
+		{0x1.ffcp-01, 0x3bff}, // largest number less than one
+		{0x1p+00, 0x3c00},     // one
+		{0x1.004p+00, 0x3c01}, // smallest number larger than one
+		{0x1.ffcp+15, 0x7bff}, // largest normal number
+		// {-0, 0x8000},
+		{-2, 0xc000},
+	}
+	for _, tt := range tests {
+		r := FromFloat64(tt.f)
+		if r != tt.r {
+			t.Errorf("expected %x, got %x", tt.r, r)
+		}
+	}
+}
+
 func TestFloat32(t *testing.T) {
 	tests := []struct {
 		f Float16
@@ -14,7 +68,7 @@ func TestFloat32(t *testing.T) {
 		// from https://en.wikipedia.org/wiki/Half-precision_floating-point_format
 		{0x0000, 0},
 		{0x0001, 0x1p-24},     // smallest positive subnormal number
-		{0x03ff, 0x1.ff8p-24}, // largest positive subnormal number
+		{0x03ff, 0x1.ff8p-15}, // largest positive subnormal number
 		{0x0400, 0x1p-14},     // smallest positive normal number
 		{0x3555, 0x1.554p-02}, // nearest value to 1/3
 		{0x3bff, 0x1.ffcp-01}, // largest number less than one
@@ -75,7 +129,7 @@ func TestFloat64(t *testing.T) {
 		// from https://en.wikipedia.org/wiki/Half-precision_floating-point_format
 		{0x0000, 0},
 		{0x0001, 0x1p-24},     // smallest positive subnormal number
-		{0x03ff, 0x1.ff8p-24}, // largest positive subnormal number
+		{0x03ff, 0x1.ff8p-15}, // largest positive subnormal number
 		{0x0400, 0x1p-14},     // smallest positive normal number
 		{0x3555, 0x1.554p-02}, // nearest value to 1/3
 		{0x3bff, 0x1.ffcp-01}, // largest number less than one

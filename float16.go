@@ -56,12 +56,13 @@ func FromBits(b uint16) Float16 {
 	return Float16(b)
 }
 
-func FromFloat64(f float64) Float16 {
-	b := math.Float64bits(f)
-	sign := uint16((b & signMask64) >> (64 - 16))
-	exp := (b >> shift64) & mask64
-	frac := b & fracMask64
-	if exp == mask64 {
+func FromFloat32(f float32) Float16 {
+	b := math.Float32bits(f)
+	sign := uint16((b & signMask32) >> (32 - 16))
+	exp := int((b>>shift32)&mask32) - bias32
+	frac := (b & fracMask32) | (1 << shift32)
+
+	if exp == mask32-bias32 {
 		if frac == 0 {
 			// infinity or negative infinity
 			return Float16(sign | (mask16 << shift16))
@@ -71,17 +72,42 @@ func FromFloat64(f float64) Float16 {
 		}
 	}
 
-	// round
-	frac += 1 << (shift64 - shift16 - 1)
-	if frac > fracMask64 {
-		exp += 1
-		frac = (frac >> 1) & fracMask64
+	if exp <= -bias16 {
+		// subnormal number
+		return Float16(sign | uint16(frac>>(-exp-1)))
 	}
 
 	// normal number
-	exp16 := exp - (bias64 - bias16)
-	frac16 := frac >> (shift64 - shift16)
-	return Float16(sign | uint16(exp16<<shift16) | uint16(frac16))
+	exp16 := uint16(exp + bias16)
+	frac16 := uint16(frac>>(shift32-shift16)) & fracMask16
+	return Float16(sign | (exp16 << shift16) | frac16)
+}
+
+func FromFloat64(f float64) Float16 {
+	b := math.Float64bits(f)
+	sign := uint16((b & signMask64) >> (64 - 16))
+	exp := int((b>>shift64)&mask64) - bias64
+	frac := (b & fracMask64) | (1 << shift64)
+
+	if exp == mask64-bias64 {
+		if frac == 0 {
+			// infinity or negative infinity
+			return Float16(sign | (mask16 << shift16))
+		} else {
+			// NaN
+			return Float16(uvnan)
+		}
+	}
+
+	if exp < -bias16 {
+		// subnormal number
+		return Float16(sign)
+	}
+
+	// normal number
+	exp16 := uint16(exp + bias16)
+	frac16 := uint16(frac>>(shift64-shift16)) & fracMask16
+	return Float16(sign | (exp16 << shift16) | frac16)
 }
 
 // Float32 returns the float32 representation of f.
@@ -97,7 +123,7 @@ func (f Float16) Float32() float32 {
 		} else {
 			l := bits.Len32(frac)
 			frac = (frac << (shift16 - l + 1)) & fracMask16
-			exp = bias32 - (bias16 + shift16 - 1)
+			exp = bias32 - (bias16 + shift16) + uint32(l)
 		}
 	} else if exp == mask16 {
 		// infinity or NaN
@@ -122,7 +148,7 @@ func (f Float16) Float64() float64 {
 			exp = 0
 		} else {
 			frac = (frac << (shift16 - l + 1)) & fracMask16
-			exp = bias64 - (bias16 + shift16 - 1)
+			exp = bias64 - (bias16 + shift16) + uint64(l)
 		}
 	} else if exp == mask16 {
 		// infinity or NaN
