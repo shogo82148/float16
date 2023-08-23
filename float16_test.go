@@ -35,17 +35,17 @@ func TestFloat32(t *testing.T) {
 
 func TestFloat32_Specials(t *testing.T) {
 	// infinity
-	if r := Float16(0x7c00).Float32(); !math.IsInf(float64(r), 1) {
+	if r := Inf(1).Float32(); !math.IsInf(float64(r), 1) {
 		t.Errorf("expected +Inf, got %x", r)
 	}
 
 	// negative infinity
-	if r := Float16(0xfc00).Float32(); !math.IsInf(float64(r), -1) {
+	if r := Inf(-1).Float32(); !math.IsInf(float64(r), -1) {
 		t.Errorf("expected -Inf, got %x", r)
 	}
 
 	// NaN
-	if r := Float16(0x7e00).Float32(); !math.IsNaN(float64(r)) {
+	if r := NaN().Float32(); !math.IsNaN(float64(r)) {
 		t.Errorf("expected NaN, got %x", r)
 	}
 
@@ -96,17 +96,17 @@ func TestFloat64(t *testing.T) {
 
 func TestFloat64_Specials(t *testing.T) {
 	// infinity
-	if r := Float16(0x7c00).Float64(); !math.IsInf(r, 1) {
+	if r := Inf(1).Float64(); !math.IsInf(r, 1) {
 		t.Errorf("expected +Inf, got %x", r)
 	}
 
 	// negative infinity
-	if r := Float16(0xfc00).Float64(); !math.IsInf(r, -1) {
+	if r := Inf(-1).Float64(); !math.IsInf(r, -1) {
 		t.Errorf("expected -Inf, got %x", r)
 	}
 
 	// NaN
-	if r := Float16(0x7e00).Float64(); !math.IsNaN(r) {
+	if r := NaN().Float64(); !math.IsNaN(r) {
 		t.Errorf("expected NaN, got %x", r)
 	}
 
