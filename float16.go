@@ -55,6 +55,14 @@ func Inf(sign int) Float16 {
 	}
 }
 
+// IsInf reports whether f is an infinity, according to sign.
+// If sign > 0, IsInf reports whether f is positive infinity.
+// If sign < 0, IsInf reports whether f is negative infinity.
+// If sign == 0, IsInf reports whether f is either infinity.
+func (f Float16) IsInf(sign int) bool {
+	return sign >= 0 && f == uvinf || sign <= 0 && f == uvneginf
+}
+
 // FromBits returns the floating point number corresponding
 // the IEEE 754 binary representation b.
 func FromBits(b uint16) Float16 {
@@ -105,6 +113,8 @@ func FromFloat32(f float32) Float16 {
 	return Float16(sign | (exp16 << shift16) | frac16)
 }
 
+// FromFloat64 returns the floating point number corresponding
+// to the IEEE 754 binary representation of f.
 func FromFloat64(f float64) Float16 {
 	b := math.Float64bits(f)
 	sign := uint16((b & signMask64) >> (64 - 16))

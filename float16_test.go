@@ -14,6 +14,26 @@ func TestIsNaN(t *testing.T) {
 	}
 }
 
+func TestIsInf(t *testing.T) {
+	tests := []struct {
+		f    Float16
+		sign int
+		inf  bool
+	}{
+		{Inf(1), 1, true},
+		{Inf(-1), 1, false},
+		{Inf(1), -1, false},
+		{Inf(-1), -1, true},
+		{Inf(1), 0, true},
+		{Inf(-1), 0, true},
+	}
+	for _, tt := range tests {
+		if tt.f.IsInf(tt.sign) != tt.inf {
+			t.Errorf("%x: expected %v", tt.f, tt.sign)
+		}
+	}
+}
+
 func TestFromFloat32(t *testing.T) {
 	tests := []struct {
 		f float32
