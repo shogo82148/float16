@@ -31,9 +31,10 @@ func TestFromFloat32(t *testing.T) {
 		{math.Nextafter32(0x1.002p+00, 2), 0x3c01},
 		{math.Nextafter32(0x1.006p+00, 0), 0x3c01},
 		{0x1.006p+00, 0x3c02},
+		{0x1.ffcp-15, 0x0400},
 
 		// underflow
-		{math.Nextafter32(0x1p-24, 0), 0x0000},
+		{0x1p-25, 0x0000},
 		{0x1p-126, 0x0000},
 		{0x1.fffffcp-127, 0x0000},
 
@@ -50,7 +51,7 @@ func TestFromFloat32(t *testing.T) {
 	for _, tt := range tests {
 		r := FromFloat32(tt.f)
 		if r != tt.r {
-			t.Errorf("expected %x, got %x", tt.r, r)
+			t.Errorf("%x: expected %x, got %x", tt.f, tt.r, r)
 		}
 	}
 }
@@ -70,8 +71,26 @@ func TestFromFloat64(t *testing.T) {
 		{0x1p+00, 0x3c00},     // one
 		{0x1.004p+00, 0x3c01}, // smallest number larger than one
 		{0x1.ffcp+15, 0x7bff}, // largest normal number
-		{negZero, 0x8000},
+		{float64(negZero), 0x8000},
 		{-2, 0xc000},
+
+		// rounds to nearest even
+		{0x1.002p+00, 0x3c00},
+		{math.Nextafter(0x1.002p+00, 2), 0x3c01},
+		{math.Nextafter(0x1.006p+00, 0), 0x3c01},
+		{0x1.006p+00, 0x3c02},
+		{0x1.ffcp-15, 0x0400},
+
+		// underflow
+		{0x1p-25, 0x0000},
+		{0x1p-126, 0x0000},
+		{0x1.fffffcp-127, 0x0000},
+
+		// overflow
+		{0x1p+16, 0x7c00},
+		{0x1p+17, 0x7c00},
+		{-0x1p+16, 0xfc00},
+		{-0x1p+17, 0xfc00},
 
 		// infinities
 		{math.Inf(1), 0x7c00},
@@ -80,7 +99,7 @@ func TestFromFloat64(t *testing.T) {
 	for _, tt := range tests {
 		r := FromFloat64(tt.f)
 		if r != tt.r {
-			t.Errorf("expected %x, got %x", tt.r, r)
+			t.Errorf("%x: expected %x, got %x", tt.f, tt.r, r)
 		}
 	}
 }
