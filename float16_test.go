@@ -8,6 +8,12 @@ import (
 
 var negZero = math.Float64frombits(1 << 63)
 
+func TestIsNaN(t *testing.T) {
+	if !NaN().IsNaN() {
+		t.Errorf("expected NaN")
+	}
+}
+
 func TestFromFloat32(t *testing.T) {
 	tests := []struct {
 		f float32

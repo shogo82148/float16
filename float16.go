@@ -41,6 +41,11 @@ func NaN() Float16 {
 	return Float16(uvnan)
 }
 
+// IsNaN reports whether f is an IEEE 754 “not-a-number” value.
+func (f Float16) IsNaN() bool {
+	return f&(mask16<<shift16) == (mask16<<shift16) && f&fracMask16 != 0
+}
+
 // Inf returns positive infinity if sign >= 0, negative infinity if sign < 0.
 func Inf(sign int) Float16 {
 	if sign >= 0 {
