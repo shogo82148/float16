@@ -13,6 +13,8 @@ func (a Float16) Mul(b Float16) Float16 {
 	fracA := int(a&fracMask16) | (1 << shift16)
 	fracB := int(b&fracMask16) | (1 << shift16)
 
-	frac := ((fracA * fracB) >> shift16) & fracMask16
+	frac := fracA * fracB
+	frac += (1<<(shift16-1) - 1) + ((frac >> shift16) & 1)
+	frac = (frac >> shift16) & fracMask16
 	return sign | Float16(exp<<shift16) | Float16(frac)
 }
