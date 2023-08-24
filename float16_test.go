@@ -158,13 +158,6 @@ func TestFloat32_Specials(t *testing.T) {
 	}
 }
 
-func BenchmarkFloat32(b *testing.B) {
-	f := Float16(0x3555)
-	for i := 0; i < b.N; i++ {
-		runtime.KeepAlive(f.Float32())
-	}
-}
-
 func TestFloat64(t *testing.T) {
 	tests := []struct {
 		f Float16
@@ -216,5 +209,33 @@ func TestFloat64_Specials(t *testing.T) {
 	// negative zero
 	if r := Float16(0x8000).Float64(); r != 0 || !math.IsInf(1/r, -1) {
 		t.Errorf("expected -0, got %x", r)
+	}
+}
+
+func BenchmarkFromFloat32(b *testing.B) {
+	f := float32(1) / 3
+	for i := 0; i < b.N; i++ {
+		runtime.KeepAlive(FromFloat32(f))
+	}
+}
+
+func BenchmarkFloat32(b *testing.B) {
+	f := Float16(0x3555)
+	for i := 0; i < b.N; i++ {
+		runtime.KeepAlive(f.Float32())
+	}
+}
+
+func BenchmarkFromFloat64(b *testing.B) {
+	f := float64(1) / 3
+	for i := 0; i < b.N; i++ {
+		runtime.KeepAlive(FromFloat64(f))
+	}
+}
+
+func BenchmarkFloat64(b *testing.B) {
+	f := Float16(0x3555)
+	for i := 0; i < b.N; i++ {
+		runtime.KeepAlive(f.Float64())
 	}
 }
