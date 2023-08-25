@@ -9,8 +9,15 @@ func TestMul(t *testing.T) {
 	tests := []struct {
 		a, b, r Float16
 	}{
+		// normal * normal = normal
 		{0x3c00, 0x3c00, 0x3c00}, // 1*1 = 1
 		{0x3c00, 0x4000, 0x4000}, // 1*2 = 2
+
+		// subnormal * normal = normal
+		{0x0200, 0x4000, 0x0400}, // 2 * 0x1p-15 = 0x1p-14
+
+		// normal * subnormal = normal
+		{0x4000, 0x0200, 0x0400}, // 0x1p-15 * 2 = 0x1p-14
 	}
 	for _, tt := range tests {
 		r := tt.a.Mul(tt.b)
