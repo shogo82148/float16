@@ -28,7 +28,7 @@ func (a Float16) Mul(b Float16) Float16 {
 	var fracB uint32
 	if expB == -bias16 {
 		// b is subnormal
-		fracB := uint32(b & fracMask16)
+		fracB = uint32(b & fracMask16)
 		l := bits.Len32(fracB)
 		fracB <<= shift16 - l + 1
 		expB = -(bias16 + shift16) + l
@@ -38,6 +38,10 @@ func (a Float16) Mul(b Float16) Float16 {
 	}
 
 	exp := expA + expB
+	frac := fracA * fracB
+	shift := bits.Len32(frac) - (shift16 + 1)
+	exp += shift - shift16
+
 	if exp < -(bias16 + shift16) {
 		// underflow
 		return sign
@@ -48,13 +52,11 @@ func (a Float16) Mul(b Float16) Float16 {
 		return sign | Float16(frac)
 	}
 
-	exp += bias16
-	frac := fracA * fracB
-	if frac >= 1<<(2*shift16+1) {
-		exp++
-		frac >>= 1
-	}
-	frac += (1<<(shift16-1) - 1) + ((frac >> shift16) & 1)
-	frac = (frac >> shift16) & fracMask16
+	exp = expA + expB + bias16
+	frac += (1<<(shift-1) - 1) + ((frac >> shift) & 1)
+	shift = bits.Len32(frac) - (shift16 + 1)
+	exp += shift - shift16
+	frac >>= shift
+	frac &= fracMask16
 	return sign | Float16(exp<<shift16) | Float16(frac)
 }
