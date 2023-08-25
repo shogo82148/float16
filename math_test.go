@@ -1,6 +1,9 @@
 package float16
 
-import "testing"
+import (
+	"runtime"
+	"testing"
+)
 
 func TestMul(t *testing.T) {
 	tests := []struct {
@@ -15,4 +18,27 @@ func TestMul(t *testing.T) {
 			t.Errorf("%x*%x: expected %x, got %x", tt.a, tt.b, tt.r, r)
 		}
 	}
+}
+
+func BenchmarkMul(b *testing.B) {
+	a := Float16(0x3c00)
+	bb := Float16(0x4000)
+	for i := 0; i < b.N; i++ {
+		runtime.KeepAlive(a.Mul(bb))
+	}
+}
+
+func FuzzMul(f *testing.F) {
+	f.Add(uint16(0x3c00), uint16(0x3c00))
+
+	f.Fuzz(func(t *testing.T, a, b uint16) {
+		fa := Float16(a)
+		fb := Float16(b)
+		fc := fa.Mul(fb)
+
+		want := FromFloat64(fa.Float64() * fb.Float64())
+		if fc != want {
+			t.Errorf("%x * %x: expected %x, got %x", fa.Float64(), fb.Float64(), want.Float64(), fc.Float64())
+		}
+	})
 }
