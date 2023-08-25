@@ -1,6 +1,8 @@
 package float16
 
-import "math/bits"
+import (
+	"math/bits"
+)
 
 // Mul returns the IEEE 754 binary64 product of a and b.
 func (a Float16) Mul(b Float16) Float16 {
@@ -35,13 +37,24 @@ func (a Float16) Mul(b Float16) Float16 {
 		fracB = uint32(b&fracMask16) | (1 << shift16)
 	}
 
-	exp := expA + expB + bias16
+	exp := expA + expB
+	if exp < -(bias16 + shift16) {
+		// underflow
+		return sign
+	} else if exp <= -bias16 {
+		// the result is subnormal
+		frac := fracA * fracB
+		frac >>= shift16 - (exp + bias16) + 1
+		return sign | Float16(frac)
+	}
+
+	exp += bias16
 	frac := fracA * fracB
-	frac += (1<<(shift16-1) - 1) + ((frac >> shift16) & 1)
 	if frac >= 1<<(2*shift16+1) {
 		exp++
 		frac >>= 1
 	}
+	frac += (1<<(shift16-1) - 1) + ((frac >> shift16) & 1)
 	frac = (frac >> shift16) & fracMask16
 	return sign | Float16(exp<<shift16) | Float16(frac)
 }
