@@ -1,8 +1,11 @@
 package float16
 
 import (
+	"errors"
+	"math"
 	"runtime"
 	"testing"
+	"testing/quick"
 )
 
 func TestMul(t *testing.T) {
@@ -14,6 +17,8 @@ func TestMul(t *testing.T) {
 		{1, 2}, // 1 * 2 = 2
 		{0x1.f44p-01, 0x1.fa8p-01},
 		{0x1.efp-01, 0x1.08cp+00},
+		{0x1p-14, 0x1p-10},
+		{0x1p-10, 0x1p-14},
 
 		// subnormal * normal = normal
 		{0x1p-15, 2}, // 0x1p-15 * 2  = 0x1p-14
@@ -26,6 +31,36 @@ func TestMul(t *testing.T) {
 
 		// subnormal * subnormal = subnormal
 		{0, 0}, // 0 * 0 = 0
+
+		// underflow
+		{0x1p-14, 0x1p-11},
+		{0x1p-11, 0x1p-14},
+
+		// overflow
+		{-0x1.b9p+06, -0x1.e24p+09},
+
+		// Infinity * 0 = NaN
+		{math.Inf(1), 0},
+		{0, math.Inf(1)},
+
+		// Infinity * anything = Infinity
+		// anything * Infinity = Infinity
+		{math.Inf(1), 1},
+		{math.Inf(1), -1},
+		{math.Inf(-1), 1},
+		{math.Inf(-1), -1},
+		{1, math.Inf(1)},
+		{-1, math.Inf(1)},
+		{1, math.Inf(-1)},
+		{-1, math.Inf(-1)},
+
+		// NaN * anything = NaN
+		// anything * NaN = NaN
+		{math.NaN(), 1},
+		{math.NaN(), math.Inf(1)},
+		{1, math.NaN()},
+		{math.Inf(1), math.NaN()},
+		{math.NaN(), math.NaN()},
 	}
 	for _, tt := range tests {
 		fa := FromFloat64(tt.a)
@@ -39,24 +74,57 @@ func TestMul(t *testing.T) {
 }
 
 func BenchmarkMul(b *testing.B) {
-	a := Float16(0x3c00)
-	bb := Float16(0x4000)
+	fa := Float16(0x3c00)
+	fb := Float16(0x4000)
 	for i := 0; i < b.N; i++ {
-		runtime.KeepAlive(a.Mul(bb))
+		runtime.KeepAlive(fa.Mul(fb))
 	}
 }
 
-func FuzzMul(f *testing.F) {
-	f.Add(uint16(0x3c00), uint16(0x3c00))
+func BenchmarkMul2(b *testing.B) {
+	fa := Float16(0x3c00)
+	fb := Float16(0x4000)
+	for i := 0; i < b.N; i++ {
+		fc := fa.Float64() * fb.Float64()
+		runtime.KeepAlive(FromFloat64(fc))
+	}
+}
 
-	f.Fuzz(func(t *testing.T, a, b uint16) {
+func TestMulQuick(t *testing.T) {
+	f := func(a, b uint16) uint16 {
 		fa := Float16(a)
 		fb := Float16(b)
 		fc := fa.Mul(fb)
-
-		want := FromFloat64(fa.Float64() * fb.Float64())
-		if fc != want {
-			t.Errorf("%x * %x: expected %x, got %x", fa.Float64(), fb.Float64(), want.Float64(), fc.Float64())
+		if fc.IsNaN() {
+			return NaN().Bits()
 		}
-	})
+		return fc.Bits()
+	}
+
+	g := func(a, b uint16) uint16 {
+		fa := Float16(a).Float64()
+		fb := Float16(b).Float64()
+		fc := fa * fb // This calculation does not cause any rounding.
+		return FromFloat64(fc).Bits()
+	}
+
+	if err := quick.CheckEqual(f, g, &quick.Config{
+		MaxCountScale: 100,
+	}); err != nil {
+		var checkErr *quick.CheckEqualError
+		if errors.As(err, &checkErr) {
+			a := checkErr.In[0].(uint16)
+			b := checkErr.In[1].(uint16)
+			c1 := checkErr.Out1[0].(uint16)
+			c2 := checkErr.Out2[0].(uint16)
+
+			fa := FromBits(a).Float64()
+			fb := FromBits(b).Float64()
+			fc1 := FromBits(c1).Float64()
+			fc2 := FromBits(c2).Float64()
+
+			t.Errorf("%x * %x: got %x, expected %x", fa, fb, fc1, fc2)
+		}
+		t.Error(err)
+	}
 }

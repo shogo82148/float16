@@ -69,6 +69,11 @@ func FromBits(b uint16) Float16 {
 	return Float16(b)
 }
 
+// Bits returns the IEEE 754 binary representation of f.
+func (f Float16) Bits() uint16 {
+	return uint16(f)
+}
+
 // FromFloat32 returns the floating point number corresponding
 // to the IEEE 754 binary representation of f.
 func FromFloat32(f float32) Float16 {
