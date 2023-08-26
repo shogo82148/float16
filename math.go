@@ -84,12 +84,14 @@ func (a Float16) Mul(b Float16) Float16 {
 	} else if exp <= -bias16 {
 		// the result is subnormal
 		frac := fracA * fracB
-		frac >>= shift16 - (exp + bias16) + 1
+		shift := shift16 - (exp + bias16) + 1
+		frac += (1<<(shift-1) - 1) + ((frac >> shift) & 1) // round to nearest even
+		frac >>= shift
 		return sign | Float16(frac)
 	}
 
 	exp = expA + expB + bias16
-	frac += (1<<(shift-1) - 1) + ((frac >> shift) & 1)
+	frac += (1<<(shift-1) - 1) + ((frac >> shift) & 1) // round to nearest even
 	shift = bits.Len32(frac) - (shift16 + 1)
 	exp += shift - shift16
 	if exp >= mask16 {

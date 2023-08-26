@@ -28,6 +28,7 @@ func TestMul(t *testing.T) {
 
 		// subnormal * normal = subnormal
 		{0x1p-24, 2}, // 0x1p-24 * 2 = 0x1p-23
+		{-0x1.1d8p-09, 0x1.07p-13},
 
 		// subnormal * subnormal = subnormal
 		{0, 0}, // 0 * 0 = 0
