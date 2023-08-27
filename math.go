@@ -104,11 +104,8 @@ func (a Float16) Mul(b Float16) Float16 {
 
 // Add returns the IEEE 754 binary64 sum of a and b.
 func (a Float16) Add(b Float16) Float16 {
-	if a.IsNaN() {
-		return a
-	}
-	if b.IsNaN() {
-		return b
+	if a.IsNaN() || b.IsNaN() {
+		return uvnan
 	}
 	if a == 0x8000 { // a is negative zero
 		return b
