@@ -101,3 +101,95 @@ func (a Float16) Mul(b Float16) Float16 {
 	frac &= fracMask16
 	return sign | Float16(exp<<shift16) | Float16(frac)
 }
+
+// Add returns the IEEE 754 binary64 sum of a and b.
+func (a Float16) Add(b Float16) Float16 {
+	if a.IsNaN() {
+		return a
+	}
+	if b.IsNaN() {
+		return b
+	}
+	if a == 0x8000 { // a is negative zero
+		return b
+	}
+	if a == uvinf {
+		if b == uvneginf {
+			// +inf + -inf = NaN
+			return NaN()
+		}
+		return uvinf // +inf + anything = +inf
+	}
+	if a == uvneginf {
+		if b == uvinf {
+			// -inf + +inf = NaN
+			return NaN()
+		}
+		return uvneginf // -inf + anything = -inf
+	}
+
+	fixA := a.fix24()
+	fixB := b.fix24()
+	return (fixA + fixB).Float16()
+}
+
+// Sub returns the IEEE 754 binary64 difference of a and b.
+func (a Float16) Sub(b Float16) Float16 {
+	return a.Add(b ^ signMask16)
+}
+
+// fix24 is a fixed-point number with 24 bits of precision.
+type fix24 int64
+
+const fix24inf = fix24(1 << 61)
+
+func (f Float16) fix24() fix24 {
+	var ret fix24
+	exp := uint32(f>>shift16) & mask16
+	frac := uint32(f & fracMask16)
+	if exp == 0 {
+		// subnormal number
+		ret = fix24(frac)
+	} else if exp == mask16 {
+		// infinity or NaN
+		ret = fix24inf
+	} else {
+		// normal number
+		ret = fix24(frac|(1<<shift16)) << (exp - 1)
+	}
+	sign := uint32(f & signMask16)
+	if sign != 0 {
+		ret = -ret
+	}
+	return ret
+}
+
+func (f fix24) Float16() Float16 {
+	if f == 0 {
+		return 0
+	}
+
+	var sign uint16
+	if f < 0 {
+		sign = signMask16
+		f = -f
+	}
+	l := bits.Len64(uint64(f))
+	if l <= shift16 {
+		// subnormal number
+		return Float16(sign | uint16(f))
+	}
+	shift := l - shift16 - 1
+	if shift > 0 {
+		f += (1<<(shift-1) - 1) + ((f >> shift) & 1) // round to nearest even
+		l = bits.Len64(uint64(f))
+	}
+
+	exp := uint16(l) - shift16
+	if exp >= mask16 {
+		// overflow
+		return Float16(sign | (mask16 << shift16))
+	}
+	frac := uint16(f>>(exp-1)) & fracMask16
+	return Float16(sign | (exp << shift16) | frac)
+}
