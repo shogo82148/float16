@@ -12,7 +12,7 @@ func TestMul(t *testing.T) {
 	tests := []struct {
 		a, b float64
 	}{
-		// normal * normal = normal
+		// normal * normal => normal
 		{1, 1}, // 1 * 1 = 1
 		{1, 2}, // 1 * 2 = 2
 		{0x1.f44p-01, 0x1.fa8p-01},
@@ -20,17 +20,20 @@ func TestMul(t *testing.T) {
 		{0x1p-14, 0x1p-10},
 		{0x1p-10, 0x1p-14},
 
-		// subnormal * normal = normal
+		// normal * normal => subnormal
+		{-0x1.c14p-12, -0x1.32cp-12},
+
+		// subnormal * normal => normal
 		{0x1p-15, 2}, // 0x1p-15 * 2  = 0x1p-14
 
-		// normal * subnormal = normal
+		// normal * subnormal => normal
 		{2, 0x1p-15}, // 0x1p-15 * 2 = 0x1p-14
 
-		// subnormal * normal = subnormal
+		// subnormal * normal => subnormal
 		{0x1p-24, 2}, // 0x1p-24 * 2 = 0x1p-23
 		{-0x1.1d8p-09, 0x1.07p-13},
 
-		// subnormal * subnormal = subnormal
+		// subnormal * subnormal => subnormal
 		{0, 0}, // 0 * 0 = 0
 
 		// underflow
@@ -40,16 +43,17 @@ func TestMul(t *testing.T) {
 		// overflow
 		{-0x1.b9p+06, -0x1.e24p+09},
 
-		// Infinity * 0 = NaN
+		// Infinity * 0 => NaN
 		{math.Inf(1), 0},
 		{0, math.Inf(1)},
 
-		// Infinity * anything = Infinity
-		// anything * Infinity = Infinity
+		// Infinity * anything => Infinity
 		{math.Inf(1), 1},
 		{math.Inf(1), -1},
 		{math.Inf(-1), 1},
 		{math.Inf(-1), -1},
+
+		// anything * Infinity => Infinity
 		{1, math.Inf(1)},
 		{-1, math.Inf(1)},
 		{1, math.Inf(-1)},
