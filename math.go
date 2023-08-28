@@ -191,3 +191,43 @@ func (f fix24) Float16() Float16 {
 	frac := uint16(f>>(exp-1)) & fracMask16
 	return Float16(sign | (exp << shift16) | frac)
 }
+
+// Cmp compares x and y and returns:
+//
+//	-1 if x <  y
+//	 0 if x == y (incl. -0 == 0, -Inf == -Inf, and +Inf == +Inf)
+//	+1 if x >  y
+//
+// a NaN is considered less than any non-NaN, and two NaNs are equal.
+func (a Float16) Cmp(b Float16) int {
+	aNaN := a.IsNaN()
+	bNaN := b.IsNaN()
+	if aNaN && bNaN {
+		return 0
+	}
+	if aNaN {
+		return -1
+	}
+	if bNaN {
+		return 1
+	}
+	if a == 0x8000 {
+		a = 0
+	}
+	if b == 0x8000 {
+		b = 0
+	}
+	if a == b {
+		return 0
+	}
+
+	ia := int16(a) ^ ((int16(a) >> 15) & 0x7fff)
+	ib := int16(b) ^ ((int16(b) >> 15) & 0x7fff)
+	if ia < ib {
+		return -1
+	}
+	if ia > ib {
+		return 1
+	}
+	return 0
+}
