@@ -142,6 +142,103 @@ func TestMulQuick(t *testing.T) {
 	}
 }
 
+func TestQuo(t *testing.T) {
+	tests := []struct {
+		a, b, r float64
+	}{
+		{1, 2, 0.5},
+		{1, 3, 0x1.554p-02},
+		{1, 5, 0x1.998p-03},
+		{0x1.46p-11, 0x1.13cp+02, 0x1.2ecp-13},
+		{0x1p+15, 0.5, math.Inf(1)},
+		{0x1p-14, 2, 0x1p-15},
+		{0x1p-24, 0x1p-24, 1},
+
+		{math.NaN(), 1, math.NaN()},
+		{1, math.NaN(), math.NaN()},
+
+		{math.Inf(1), 1, math.Inf(1)},
+		{math.Inf(1), 0, math.Inf(1)},
+		{math.Inf(1), math.Inf(1), math.NaN()},
+		{1, math.Inf(1), 0},
+		{1, math.Inf(-1), negZero},
+		{1, 0, math.Inf(1)},
+
+		// 0 / 0
+		{negZero, 0, math.Inf(-1)},
+		{0, negZero, math.Inf(-1)},
+		{0, 0, math.NaN()},
+		{negZero, negZero, math.NaN()},
+	}
+
+	for _, tt := range tests {
+		fa := FromFloat64(tt.a)
+		if !fa.IsNaN() && fa.Float64() != tt.a {
+			t.Errorf("%x + %x: invalid test case: converting %x to float16 loss data", tt.a, tt.b, tt.a)
+		}
+		fb := FromFloat64(tt.b)
+		if !fb.IsNaN() && fb.Float64() != tt.b {
+			t.Errorf("%x + %x: invalid test case: converting %x to float16 loss data", tt.a, tt.b, tt.b)
+		}
+		fr := FromFloat64(tt.r)
+		if !fr.IsNaN() && fr.Float64() != tt.r {
+			t.Errorf("%x + %x: invalid test case: converting %x to float16 loss data", tt.a, tt.b, tt.b)
+		}
+		fc := fa.Quo(fb)
+		if fc != fr {
+			t.Errorf("%x / %x: expected %x (0x%04x), got %x (0x%04x)", tt.a, tt.b, fr.Float64(), fr, fc.Float64(), fc)
+		}
+	}
+}
+
+// func TestQuoQuick(t *testing.T) {
+// 	f := func(a, b uint16) uint16 {
+// 		fa := Float16(a)
+// 		fb := Float16(b)
+// 		fc := fa.Quo(fb)
+// 		if fc.IsNaN() {
+// 			return NaN().Bits()
+// 		}
+// 		return fc.Bits()
+// 	}
+
+// 	g := func(a, b uint16) uint16 {
+// 		fa := Float16(a).Float64()
+// 		if math.IsNaN(fa) {
+// 			return NaN().Bits()
+// 		}
+// 		bigA := new(big.Float).SetFloat64(fa)
+// 		fb := Float16(b).Float64()
+// 		if math.IsNaN(fb) {
+// 			return NaN().Bits()
+// 		}
+// 		bigB := new(big.Float).SetFloat64(fb)
+// 		fc := new(big.Float).SetPrec(11).Quo(bigA, bigB)
+// 		f64, _ := fc.Float64()
+// 		return FromFloat64(f64).Bits()
+// 	}
+
+// 	if err := quick.CheckEqual(f, g, &quick.Config{
+// 		MaxCountScale: 100,
+// 	}); err != nil {
+// 		var checkErr *quick.CheckEqualError
+// 		if errors.As(err, &checkErr) {
+// 			a := checkErr.In[0].(uint16)
+// 			b := checkErr.In[1].(uint16)
+// 			c1 := checkErr.Out1[0].(uint16)
+// 			c2 := checkErr.Out2[0].(uint16)
+
+// 			fa := FromBits(a).Float64()
+// 			fb := FromBits(b).Float64()
+// 			fc1 := FromBits(c1).Float64()
+// 			fc2 := FromBits(c2).Float64()
+
+// 			t.Errorf("%x / %x: got %x, expected %x", fa, fb, fc1, fc2)
+// 		}
+// 		t.Error(err)
+// 	}
+// }
+
 func TestAdd(t *testing.T) {
 	tests := []struct {
 		a, b float64
