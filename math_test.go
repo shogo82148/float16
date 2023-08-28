@@ -1,6 +1,7 @@
 package float16
 
 import (
+	"cmp"
 	"errors"
 	"math"
 	"runtime"
@@ -253,5 +254,111 @@ func BenchmarkAdd2(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		fc := fa.Float64() + fb.Float64()
 		runtime.KeepAlive(FromFloat64(fc))
+	}
+}
+
+func TestCmp(t *testing.T) {
+	tests := []struct {
+		a, b float64
+	}{
+		// positive numbers
+		{1, 1},
+		{1, 2},
+		{2, 1},
+
+		// negative numbers
+		{-1, -1},
+		{-1, -2},
+		{-2, -1},
+
+		// positive and negative numbers
+		{-1, 1},
+		{1, -1},
+		{-2, 1},
+		{2, -1},
+
+		// infinity
+		{math.Inf(1), 1},
+		{math.Inf(-1), -1},
+		{math.Inf(1), math.Inf(1)},
+		{math.Inf(1), math.Inf(-1)},
+		{math.Inf(-1), math.Inf(1)},
+		{math.Inf(-1), math.Inf(-1)},
+
+		// a NaN is considered less than any non-NaN
+		{math.NaN(), 0},
+		{math.NaN(), 1},
+		{math.NaN(), math.Inf(1)},
+		{math.NaN(), math.Inf(-1)},
+
+		// negative zero
+		{0, 0},
+		{negZero, 0},
+		{0, negZero},
+		{negZero, negZero},
+	}
+	for _, tt := range tests {
+		fa := FromFloat64(tt.a)
+		if !fa.IsNaN() && fa.Float64() != tt.a {
+			t.Errorf("%x + %x: invalid test case: converting %x to float16 loss data", tt.a, tt.b, tt.a)
+		}
+		fb := FromFloat64(tt.b)
+		if !fb.IsNaN() && fb.Float64() != tt.b {
+			t.Errorf("%x + %x: invalid test case: converting %x to float16 loss data", tt.a, tt.b, tt.b)
+		}
+		fr := cmp.Compare(tt.a, tt.b)
+		fc := fa.Cmp(fb)
+		if fc != fr {
+			t.Errorf("%x <=> %x: expected %d, got %d", tt.a, tt.b, fr, fc)
+		}
+	}
+}
+
+func TestCmpQuick(t *testing.T) {
+	f := func(a, b uint16) int {
+		fa := Float16(a)
+		fb := Float16(b)
+		return fa.Cmp(fb)
+	}
+
+	g := func(a, b uint16) int {
+		fa := Float16(a).Float64()
+		fb := Float16(b).Float64()
+		return cmp.Compare(fa, fb)
+	}
+
+	if err := quick.CheckEqual(f, g, &quick.Config{
+		MaxCountScale: 100,
+	}); err != nil {
+		var checkErr *quick.CheckEqualError
+		if errors.As(err, &checkErr) {
+			a := checkErr.In[0].(uint16)
+			b := checkErr.In[1].(uint16)
+			c1 := checkErr.Out1[0].(int)
+			c2 := checkErr.Out2[0].(int)
+
+			fa := FromBits(a).Float64()
+			fb := FromBits(b).Float64()
+
+			t.Errorf("%x + %x: got %d, expected %d", fa, fb, c1, c2)
+		}
+		t.Error(err)
+	}
+}
+
+func BenchmarkCmp(b *testing.B) {
+	fa := Float16(0x3c00)
+	fb := Float16(0x4000)
+	for i := 0; i < b.N; i++ {
+		runtime.KeepAlive(fa.Cmp(fb))
+	}
+}
+
+func BenchmarkCmp2(b *testing.B) {
+	fa := Float16(0x3c00)
+	fb := Float16(0x4000)
+	for i := 0; i < b.N; i++ {
+		c := cmp.Compare(fa.Float64(), fb.Float64())
+		runtime.KeepAlive(c)
 	}
 }
