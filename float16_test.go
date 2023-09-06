@@ -4,7 +4,6 @@ import (
 	"math"
 	"runtime"
 	"testing"
-	"testing/quick"
 )
 
 var negZero = math.Float64frombits(1 << 63)
@@ -86,11 +85,13 @@ func TestFromFloat32(t *testing.T) {
 	}
 }
 
-func TestFromFloat32_Quick(t *testing.T) {
-	quick.Check(func(bits uint16) bool {
-		f := FromBits(bits)
-		return f == FromFloat32(f.Float32())
-	}, nil)
+func TestFromFloat32_All(t *testing.T) {
+	for bits := 0; bits < 1<<16; bits++ {
+		f := FromBits(uint16(bits))
+		if !f.IsNaN() && f != FromFloat32(f.Float32()) {
+			t.Errorf("%x: expected %x, got %x", bits, f, FromFloat32(f.Float32()))
+		}
+	}
 }
 
 func TestFromFloat64(t *testing.T) {
@@ -144,11 +145,13 @@ func TestFromFloat64(t *testing.T) {
 	}
 }
 
-func TestFromFloat64_Quick(t *testing.T) {
-	quick.Check(func(bits uint16) bool {
-		f := FromBits(bits)
-		return f == FromFloat64(f.Float64())
-	}, nil)
+func TestFromFloat64_All(t *testing.T) {
+	for bits := 0; bits < 1<<16; bits++ {
+		f := FromBits(uint16(bits))
+		if !f.IsNaN() && f != FromFloat64(f.Float64()) {
+			t.Errorf("%x: expected %x, got %x", bits, f, FromFloat64(f.Float64()))
+		}
+	}
 }
 
 func TestFloat32(t *testing.T) {

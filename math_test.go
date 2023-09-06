@@ -2,11 +2,10 @@ package float16
 
 import (
 	"cmp"
-	"errors"
 	"math"
 	"runtime"
+	"sync"
 	"testing"
-	"testing/quick"
 )
 
 func TestMul(t *testing.T) {
@@ -103,7 +102,7 @@ func BenchmarkMul2(b *testing.B) {
 	}
 }
 
-func TestMulQuick(t *testing.T) {
+func TestMul_All(t *testing.T) {
 	f := func(a, b uint16) uint16 {
 		fa := Float16(a)
 		fb := Float16(b)
@@ -121,25 +120,22 @@ func TestMulQuick(t *testing.T) {
 		return FromFloat64(fc).Bits()
 	}
 
-	if err := quick.CheckEqual(f, g, &quick.Config{
-		MaxCountScale: 100,
-	}); err != nil {
-		var checkErr *quick.CheckEqualError
-		if errors.As(err, &checkErr) {
-			a := checkErr.In[0].(uint16)
-			b := checkErr.In[1].(uint16)
-			c1 := checkErr.Out1[0].(uint16)
-			c2 := checkErr.Out2[0].(uint16)
-
-			fa := FromBits(a).Float64()
-			fb := FromBits(b).Float64()
-			fc1 := FromBits(c1).Float64()
-			fc2 := FromBits(c2).Float64()
-
-			t.Errorf("%x * %x: got %x, expected %x", fa, fb, fc1, fc2)
-		}
-		t.Error(err)
+	var wg sync.WaitGroup
+	for a := 0; a < 0x10000; a++ {
+		a := a
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for b := 0; b < 0x10000; b++ {
+				got := f(uint16(a), uint16(b))
+				want := g(uint16(a), uint16(b))
+				if got != want {
+					t.Errorf("%x * %x: got %x, expected %x", a, b, got, want)
+				}
+			}
+		}()
 	}
+	wg.Wait()
 }
 
 func TestQuo(t *testing.T) {
@@ -271,9 +267,11 @@ func TestAdd(t *testing.T) {
 
 		// NaN + anything = NaN
 		{math.NaN(), -0x1p+14},
+		{math.NaN(), math.Inf(1)},
 
 		// anything + NaN = NaN
 		{-0x1p+14, math.NaN()},
+		{math.Inf(1), math.NaN()},
 	}
 	for _, tt := range tests {
 		fa := FromFloat64(tt.a)
@@ -298,7 +296,7 @@ func TestAdd(t *testing.T) {
 	}
 }
 
-func TestAddQuick(t *testing.T) {
+func TestAdd_All(t *testing.T) {
 	f := func(a, b uint16) uint16 {
 		fa := Float16(a)
 		fb := Float16(b)
@@ -316,25 +314,22 @@ func TestAddQuick(t *testing.T) {
 		return FromFloat64(fc).Bits()
 	}
 
-	if err := quick.CheckEqual(f, g, &quick.Config{
-		MaxCountScale: 100,
-	}); err != nil {
-		var checkErr *quick.CheckEqualError
-		if errors.As(err, &checkErr) {
-			a := checkErr.In[0].(uint16)
-			b := checkErr.In[1].(uint16)
-			c1 := checkErr.Out1[0].(uint16)
-			c2 := checkErr.Out2[0].(uint16)
-
-			fa := FromBits(a).Float64()
-			fb := FromBits(b).Float64()
-			fc1 := FromBits(c1).Float64()
-			fc2 := FromBits(c2).Float64()
-
-			t.Errorf("%x + %x: got %x, expected %x", fa, fb, fc1, fc2)
-		}
-		t.Error(err)
+	var wg sync.WaitGroup
+	for a := 0; a < 0x10000; a++ {
+		a := a
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for b := 0; b < 0x10000; b++ {
+				got := f(uint16(a), uint16(b))
+				want := g(uint16(a), uint16(b))
+				if got != want {
+					t.Errorf("%x + %x: got %x, expected %x", a, b, got, want)
+				}
+			}
+		}()
 	}
+	wg.Wait()
 }
 
 func BenchmarkAdd(b *testing.B) {
@@ -411,7 +406,7 @@ func TestCmp(t *testing.T) {
 	}
 }
 
-func TestCmpQuick(t *testing.T) {
+func TestCmp_All(t *testing.T) {
 	f := func(a, b uint16) int {
 		fa := Float16(a)
 		fb := Float16(b)
@@ -424,23 +419,22 @@ func TestCmpQuick(t *testing.T) {
 		return cmp.Compare(fa, fb)
 	}
 
-	if err := quick.CheckEqual(f, g, &quick.Config{
-		MaxCountScale: 100,
-	}); err != nil {
-		var checkErr *quick.CheckEqualError
-		if errors.As(err, &checkErr) {
-			a := checkErr.In[0].(uint16)
-			b := checkErr.In[1].(uint16)
-			c1 := checkErr.Out1[0].(int)
-			c2 := checkErr.Out2[0].(int)
-
-			fa := FromBits(a).Float64()
-			fb := FromBits(b).Float64()
-
-			t.Errorf("%x + %x: got %d, expected %d", fa, fb, c1, c2)
-		}
-		t.Error(err)
+	var wg sync.WaitGroup
+	for a := 0; a < 0x10000; a++ {
+		a := a
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for b := 0; b < 0x10000; b++ {
+				got := f(uint16(a), uint16(b))
+				want := g(uint16(a), uint16(b))
+				if got != want {
+					t.Errorf("%x <=> %x: got %x, expected %x", a, b, got, want)
+				}
+			}
+		}()
 	}
+	wg.Wait()
 }
 
 func BenchmarkCmp(b *testing.B) {
