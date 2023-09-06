@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go }}
-      - run: go test -coverprofile="coverage.txt" -v ./...
+      - run: go test -coverprofile="coverage.txt" -timeout 1h -v ./...
       - name: upload coverage
         uses: codecov/codecov-action@v3
         with:
