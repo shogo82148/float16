@@ -2,11 +2,99 @@ package float16
 
 import (
 	"cmp"
+	"errors"
 	"math"
 	"runtime"
 	"sync"
 	"testing"
+	"testing/quick"
 )
+
+func checkEqual(t *testing.T, f, g func(a, b uint16) uint16, op string) {
+	if testing.Short() {
+		if err := quick.CheckEqual(f, g, &quick.Config{
+			MaxCountScale: 100,
+		}); err != nil {
+			var checkErr *quick.CheckEqualError
+			if errors.As(err, &checkErr) {
+				a := checkErr.In[0].(uint16)
+				b := checkErr.In[1].(uint16)
+				c1 := checkErr.Out1[0].(uint16)
+				c2 := checkErr.Out2[0].(uint16)
+
+				fa := FromBits(a).Float64()
+				fb := FromBits(b).Float64()
+				fc1 := FromBits(c1).Float64()
+				fc2 := FromBits(c2).Float64()
+
+				t.Errorf("%x(%x) %s %x(%x): got %x(%x), expected %x(%x)", fa, a, op, fb, b, fc1, c1, fc2, c2)
+			}
+			t.Error(err)
+		}
+	} else {
+		var wg sync.WaitGroup
+		for a := 0; a < 0x10000; a++ {
+			a := a
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for b := 0; b < 0x10000; b++ {
+					got := f(uint16(a), uint16(b))
+					want := g(uint16(a), uint16(b))
+					if got != want {
+						fa := Float16(a).Float64()
+						fb := Float16(b).Float64()
+						fc1 := Float16(got).Float64()
+						fc2 := Float16(want).Float64()
+						t.Errorf("%x(%x) %s %x(%x): got %x(%x), expected %x(%x)", fa, a, op, fb, b, fc1, got, fc2, want)
+					}
+				}
+			}()
+		}
+		wg.Wait()
+	}
+}
+
+func checkEqualInt(t *testing.T, f, g func(a, b uint16) int, op string) {
+	if testing.Short() {
+		if err := quick.CheckEqual(f, g, &quick.Config{
+			MaxCountScale: 100,
+		}); err != nil {
+			var checkErr *quick.CheckEqualError
+			if errors.As(err, &checkErr) {
+				a := checkErr.In[0].(uint16)
+				b := checkErr.In[1].(uint16)
+				c1 := checkErr.Out1[0].(int)
+				c2 := checkErr.Out2[0].(int)
+
+				fa := FromBits(a).Float64()
+				fb := FromBits(b).Float64()
+
+				t.Errorf("%x(%x) %s %x(%x): got %d, expected %d", fa, a, op, fb, b, c1, c2)
+			}
+			t.Error(err)
+		}
+	} else {
+		var wg sync.WaitGroup
+		for a := 0; a < 0x10000; a++ {
+			a := a
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for b := 0; b < 0x10000; b++ {
+					got := f(uint16(a), uint16(b))
+					want := g(uint16(a), uint16(b))
+					if got != want {
+						fa := Float16(a).Float64()
+						fb := Float16(b).Float64()
+						t.Errorf("%x(%x) %s %x(%x): got %d, expected %d", fa, a, op, fb, b, got, want)
+					}
+				}
+			}()
+		}
+		wg.Wait()
+	}
+}
 
 func TestMul(t *testing.T) {
 	tests := []struct {
@@ -120,22 +208,7 @@ func TestMul_All(t *testing.T) {
 		return FromFloat64(fc).Bits()
 	}
 
-	var wg sync.WaitGroup
-	for a := 0; a < 0x10000; a++ {
-		a := a
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for b := 0; b < 0x10000; b++ {
-				got := f(uint16(a), uint16(b))
-				want := g(uint16(a), uint16(b))
-				if got != want {
-					t.Errorf("%x * %x: got %x, expected %x", a, b, got, want)
-				}
-			}
-		}()
-	}
-	wg.Wait()
+	checkEqual(t, f, g, "*")
 }
 
 func TestQuo(t *testing.T) {
@@ -314,22 +387,7 @@ func TestAdd_All(t *testing.T) {
 		return FromFloat64(fc).Bits()
 	}
 
-	var wg sync.WaitGroup
-	for a := 0; a < 0x10000; a++ {
-		a := a
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for b := 0; b < 0x10000; b++ {
-				got := f(uint16(a), uint16(b))
-				want := g(uint16(a), uint16(b))
-				if got != want {
-					t.Errorf("%x + %x: got %x, expected %x", a, b, got, want)
-				}
-			}
-		}()
-	}
-	wg.Wait()
+	checkEqual(t, f, g, "+")
 }
 
 func BenchmarkAdd(b *testing.B) {
