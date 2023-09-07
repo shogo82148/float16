@@ -10,6 +10,31 @@ import (
 	"testing/quick"
 )
 
+// xorshift32 is a pseudo random number generator.
+// https://en.wikipedia.org/wiki/Xorshift
+type xorshift32 uint32 // xorshift32
+
+func newXorshift32() *xorshift32 {
+	x := xorshift32(42)
+	return &x
+}
+
+func (x *xorshift32) Uint32() uint32 {
+	*x ^= *x << 13
+	*x ^= *x >> 17
+	*x ^= *x << 5
+	return uint32(*x)
+}
+
+// Float16Pair returns a pair of random Float16 values.
+// It is used to obtain benchmarks in case of CPU branch mis-prediction.
+func (x *xorshift32) Float16Pair() (Float16, Float16) {
+	u32 := x.Uint32()
+	a := Float16(u32 & 0xffff)
+	b := Float16((u32 >> 16) & 0xffff)
+	return a, b
+}
+
 func checkEqual(t *testing.T, f, g func(a, b uint16) uint16, op string) {
 	if testing.Short() {
 		if err := quick.CheckEqual(f, g, &quick.Config{
@@ -174,17 +199,17 @@ func TestMul(t *testing.T) {
 }
 
 func BenchmarkMul(b *testing.B) {
-	fa := Float16(0x3c00)
-	fb := Float16(0x4000)
+	x := newXorshift32()
 	for i := 0; i < b.N; i++ {
+		fa, fb := x.Float16Pair()
 		runtime.KeepAlive(fa.Mul(fb))
 	}
 }
 
 func BenchmarkMul2(b *testing.B) {
-	fa := Float16(0x3c00)
-	fb := Float16(0x4000)
+	x := newXorshift32()
 	for i := 0; i < b.N; i++ {
+		fa, fb := x.Float16Pair()
 		fc := fa.Float64() * fb.Float64()
 		runtime.KeepAlive(FromFloat64(fc))
 	}
@@ -391,17 +416,17 @@ func TestAdd_All(t *testing.T) {
 }
 
 func BenchmarkAdd(b *testing.B) {
-	fa := Float16(0x3c00)
-	fb := Float16(0x4000)
+	x := newXorshift32()
 	for i := 0; i < b.N; i++ {
+		fa, fb := x.Float16Pair()
 		runtime.KeepAlive(fa.Add(fb))
 	}
 }
 
 func BenchmarkAdd2(b *testing.B) {
-	fa := Float16(0x3c00)
-	fb := Float16(0x4000)
+	x := newXorshift32()
 	for i := 0; i < b.N; i++ {
+		fa, fb := x.Float16Pair()
 		fc := fa.Float64() + fb.Float64()
 		runtime.KeepAlive(FromFloat64(fc))
 	}
@@ -496,17 +521,17 @@ func TestCmp_All(t *testing.T) {
 }
 
 func BenchmarkCmp(b *testing.B) {
-	fa := Float16(0x3c00)
-	fb := Float16(0x4000)
+	x := newXorshift32()
 	for i := 0; i < b.N; i++ {
+		fa, fb := x.Float16Pair()
 		runtime.KeepAlive(fa.Cmp(fb))
 	}
 }
 
 func BenchmarkCmp2(b *testing.B) {
-	fa := Float16(0x3c00)
-	fb := Float16(0x4000)
+	x := newXorshift32()
 	for i := 0; i < b.N; i++ {
+		fa, fb := x.Float16Pair()
 		c := cmp.Compare(fa.Float64(), fb.Float64())
 		runtime.KeepAlive(c)
 	}
