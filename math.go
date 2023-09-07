@@ -214,16 +214,21 @@ func (a Float16) Add(b Float16) Float16 {
 		if a&fracMask16 == 0 {
 			// a is infinity
 			if b == a^signMask16 {
-				// +inf + -inf = NaN
+				// ±inf + ∓inf = NaN
 				return NaN()
 			}
-			return a // inf + anything = inf
+			if b.IsNaN() {
+				// anything + NaN = NaN
+				return uvnan
+			}
+			return a // ±inf + anything = ±inf
 		} else {
 			// a is NaN
 			return uvnan
 		}
 	}
 	if b.IsNaN() {
+		// anything + NaN = NaN
 		return uvnan
 	}
 
