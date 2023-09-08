@@ -317,18 +317,11 @@ func (a Float16) Cmp(b Float16) int {
 	if bNaN {
 		return 1
 	}
-	if a == 0x8000 {
-		a = 0
-	}
-	if b == 0x8000 {
-		b = 0
-	}
-	if a == b {
-		return 0
-	}
 
 	ia := int16(a) ^ ((int16(a) >> 15) & 0x7fff)
+	ia += int16(a >> 15)
 	ib := int16(b) ^ ((int16(b) >> 15) & 0x7fff)
+	ib += int16(b >> 15)
 	if ia < ib {
 		return -1
 	}

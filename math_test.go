@@ -502,22 +502,7 @@ func TestCmp_All(t *testing.T) {
 		return cmp.Compare(fa, fb)
 	}
 
-	var wg sync.WaitGroup
-	for a := 0; a < 0x10000; a++ {
-		a := a
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for b := 0; b < 0x10000; b++ {
-				got := f(uint16(a), uint16(b))
-				want := g(uint16(a), uint16(b))
-				if got != want {
-					t.Errorf("%x <=> %x: got %x, expected %x", a, b, got, want)
-				}
-			}
-		}()
-	}
-	wg.Wait()
+	checkEqualInt(t, f, g, "<=>")
 }
 
 func BenchmarkCmp(b *testing.B) {
