@@ -387,13 +387,13 @@ func TestAdd(t *testing.T) {
 		}
 		fr := FromFloat64(tt.a + tt.b)
 		fc := fa.Add(fb)
-		if fc != fr {
+		if fc != fr && !(fc.IsNaN() && fr.IsNaN()) {
 			t.Errorf("%x + %x: expected %x (0x%04x), got %x (0x%04x)", tt.a, tt.b, fr.Float64(), fr, fc.Float64(), fc)
 		}
 
 		fr = FromFloat64(tt.b - tt.a)
 		fc = fb.Sub(fa)
-		if fc != fr {
+		if fc != fr && !(fc.IsNaN() && fr.IsNaN()) {
 			t.Errorf("%x - %x: expected %x (0x%04x), got %x (0x%04x)", tt.b, tt.a, fr.Float64(), fr, fc.Float64(), fc)
 		}
 	}
