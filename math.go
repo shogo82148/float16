@@ -110,10 +110,15 @@ func (a Float16) Quo(b Float16) Float16 {
 	expB := int((b>>shift16)&mask16) - bias16
 	sign := signA ^ signB
 
+	if a.IsNaN() {
+		return a
+	}
+
 	if b&^signMask16 == 0x0000 {
 		// division by zero
-		if a == b {
+		if a&^signMask16 == 0 {
 			// ±0 / ±0 = NaN
+			// ±0 / ∓0 = NaN
 			return Float16(uvnan)
 		}
 		// +x / ±0 = ±Inf
@@ -165,6 +170,10 @@ func (a Float16) Quo(b Float16) Float16 {
 		// a is normal
 		fracA = uint32(a&fracMask16) | (1 << shift16)
 	}
+	if fracA == 0 {
+		// a is zero
+		return sign
+	}
 
 	var fracB uint32
 	if expB == -bias16 {
@@ -187,20 +196,30 @@ func (a Float16) Quo(b Float16) Float16 {
 		// overflow
 		return sign | (mask16 << shift16)
 	}
+	shift := shift16 + 3 // 1 for the implicit bit, 1 for the rounding bit, 1 for the guard bit
+	fracA = (fracA << shift)
+	frac := uint16(fracA / fracB)
+	mod := uint16(fracA % fracB)
+	frac |= squash(mod)
 	if exp <= 0 {
 		// the result is subnormal
-		shift := -exp + 1
-		fracA += (1<<(shift-1) - 1) + ((fracA >> shift) & 1) // round to nearest even
-		fracA >>= shift
-		return sign | Float16(fracA)
+		shift := -exp + 3 + 1
+		frac += (1<<(shift-1) - 1) + ((frac >> shift) & 1) // round to nearest even
+		frac >>= shift
+		return sign | Float16(frac)
 	}
-	shift := shift16 + 3 // 1 for the implicit bit, 1 for the rounding bit, 1 for the guard bit
-	fracA = (fracA << shift) + (fracB+1)/2
-	frac := fracA / fracB
-	frac += 0x3 + ((frac >> 3) & 1) // round to nearest even
-	frac >>= 3
 
+	frac += 0b11 + ((frac >> 3) & 1) // round to nearest even
+	frac >>= 3
 	return sign | Float16(exp<<shift16) | Float16(frac&fracMask16)
+}
+
+func squash(x uint16) uint16 {
+	x |= x >> 8
+	x |= x >> 4
+	x |= x >> 2
+	x |= x >> 1
+	return x & 1
 }
 
 // Add returns the IEEE 754 binary64 sum of a and b.
