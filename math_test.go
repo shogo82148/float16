@@ -194,7 +194,7 @@ func TestMul(t *testing.T) {
 		}
 		fr := FromFloat64(tt.a * tt.b)
 		fc := fa.Mul(fb)
-		if fc != fr && !(fc.IsNaN() && fr.IsNaN()) {
+		if fc.Compare(fr) != 0 {
 			t.Errorf("%x * %x: expected %x (0x%04x), got %x (0x%04x)", tt.a, tt.b, fr.Float64(), fr, fc.Float64(), fc)
 		}
 	}
@@ -301,7 +301,7 @@ func TestQuo(t *testing.T) {
 			t.Errorf("%x + %x: invalid test case: converting %x to float16 loss data", tt.a, tt.b, tt.b)
 		}
 		fc := fa.Quo(fb)
-		if fc != fr {
+		if fc.Compare(fr) != 0 {
 			t.Errorf("%x / %x: expected %x (0x%04x), got %x (0x%04x)", tt.a, tt.b, fr.Float64(), fr, fc.Float64(), fc)
 		}
 	}
@@ -324,7 +324,11 @@ func TestQuo_All(t *testing.T) {
 
 		if math.IsNaN(fa) || math.IsNaN(fb) || math.IsInf(fa, 0) || math.IsInf(fb, 0) || fb == 0 {
 			// big.Float can't handle these special cases.
-			return FromFloat64(fa / fb).Bits()
+			fc := FromFloat64(fa / fb)
+			if fc.IsNaN() {
+				return NaN().Bits()
+			}
+			return fc.Bits()
 		}
 
 		bigA := new(big.Float).SetFloat64(fa)
@@ -387,13 +391,13 @@ func TestAdd(t *testing.T) {
 		}
 		fr := FromFloat64(tt.a + tt.b)
 		fc := fa.Add(fb)
-		if fc != fr && !(fc.IsNaN() && fr.IsNaN()) {
+		if fc.Compare(fr) != 0 {
 			t.Errorf("%x + %x: expected %x (0x%04x), got %x (0x%04x)", tt.a, tt.b, fr.Float64(), fr, fc.Float64(), fc)
 		}
 
 		fr = FromFloat64(tt.b - tt.a)
 		fc = fb.Sub(fa)
-		if fc != fr && !(fc.IsNaN() && fr.IsNaN()) {
+		if fc.Compare(fr) != 0 {
 			t.Errorf("%x - %x: expected %x (0x%04x), got %x (0x%04x)", tt.b, tt.a, fr.Float64(), fr, fc.Float64(), fc)
 		}
 	}
@@ -414,6 +418,9 @@ func TestAdd_All(t *testing.T) {
 		fa := Float16(a).Float64()
 		fb := Float16(b).Float64()
 		fc := fa + fb // This calculation does not cause any rounding.
+		if math.IsNaN(fc) {
+			return NaN().Bits()
+		}
 		return FromFloat64(fc).Bits()
 	}
 
