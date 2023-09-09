@@ -36,6 +36,13 @@ func (x *xorshift32) Float16Pair() (Float16, Float16) {
 	return a, b
 }
 
+func BenchmarkFloat16Pair(b *testing.B) {
+	x := newXorshift32()
+	for i := 0; i < b.N; i++ {
+		x.Float16Pair()
+	}
+}
+
 func checkEqual(t *testing.T, f, g func(a, b uint16) uint16, op string) {
 	t.Helper()
 	if testing.Short() {
@@ -647,6 +654,18 @@ func TestEq(t *testing.T) {
 		if want != got {
 			t.Errorf("%x > %x: expected %t, got %t", tt.a, tt.b, want, got)
 		}
+
+		want = tt.a <= tt.b
+		got = fa.Le(fb)
+		if want != got {
+			t.Errorf("%x <= %x: expected %t, got %t", tt.a, tt.b, want, got)
+		}
+
+		want = tt.a >= tt.b
+		got = fa.Ge(fb)
+		if want != got {
+			t.Errorf("%x >= %x: expected %t, got %t", tt.a, tt.b, want, got)
+		}
 	}
 }
 
@@ -676,6 +695,19 @@ func TestLt_TestFloat(t *testing.T) {
 	}
 }
 
+//go:generate sh -c "perl scripts/f16_le.pl | gofmt > f16_le_test.go"
+
+func TestLe_TestFloat(t *testing.T) {
+	for _, tt := range f16Le {
+		fa := tt.a
+		fb := tt.b
+		got := fa.Le(fb)
+		if got != tt.want {
+			t.Errorf("%x <= %x: expected %t, got %t", tt.a, tt.b, tt.want, got)
+		}
+	}
+}
+
 func BenchmarkEq(b *testing.B) {
 	x := newXorshift32()
 	for i := 0; i < b.N; i++ {
@@ -689,5 +721,13 @@ func BenchmarkLt(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		fa, fb := x.Float16Pair()
 		runtime.KeepAlive(fa.Lt(fb))
+	}
+}
+
+func BenchmarkLe(b *testing.B) {
+	x := newXorshift32()
+	for i := 0; i < b.N; i++ {
+		fa, fb := x.Float16Pair()
+		runtime.KeepAlive(fa.Le(fb))
 	}
 }
