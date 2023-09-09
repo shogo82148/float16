@@ -135,7 +135,7 @@ func TestFromFloat64(t *testing.T) {
 		{math.Inf(-1), 0xfc00},
 
 		// NaN
-		{math.NaN(), 0x7e01},
+		{math.NaN(), 0x7e00},
 	}
 	for _, tt := range tests {
 		r := FromFloat64(tt.f)

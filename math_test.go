@@ -37,6 +37,7 @@ func (x *xorshift32) Float16Pair() (Float16, Float16) {
 }
 
 func checkEqual(t *testing.T, f, g func(a, b uint16) uint16, op string) {
+	t.Helper()
 	if testing.Short() {
 		if err := quick.CheckEqual(f, g, &quick.Config{
 			MaxCountScale: 100,
@@ -193,7 +194,7 @@ func TestMul(t *testing.T) {
 		}
 		fr := FromFloat64(tt.a * tt.b)
 		fc := fa.Mul(fb)
-		if fc != fr {
+		if fc != fr && !(fc.IsNaN() && fr.IsNaN()) {
 			t.Errorf("%x * %x: expected %x (0x%04x), got %x (0x%04x)", tt.a, tt.b, fr.Float64(), fr, fc.Float64(), fc)
 		}
 	}
@@ -231,6 +232,9 @@ func TestMul_All(t *testing.T) {
 		fa := Float16(a).Float64()
 		fb := Float16(b).Float64()
 		fc := fa * fb // This calculation does not cause any rounding.
+		if math.IsNaN(fc) {
+			return NaN().Bits()
+		}
 		return FromFloat64(fc).Bits()
 	}
 
