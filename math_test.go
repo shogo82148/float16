@@ -200,6 +200,19 @@ func TestMul(t *testing.T) {
 	}
 }
 
+//go:generate sh -c "perl scripts/f16_mul.pl | gofmt > f16_mul_test.go"
+
+func TestMul_TestFloat(t *testing.T) {
+	for _, tt := range f16Mul {
+		fa := tt.a
+		fb := tt.b
+		got := fa.Mul(fb)
+		if got != tt.want {
+			t.Errorf("%x * %x: expected %x, got %x", tt.a, tt.b, tt.want, got)
+		}
+	}
+}
+
 func BenchmarkMul(b *testing.B) {
 	x := newXorshift32()
 	for i := 0; i < b.N; i++ {

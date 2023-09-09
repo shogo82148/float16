@@ -6,44 +6,37 @@ import (
 
 // Mul returns the IEEE 754 binary64 product of a and b.
 func (a Float16) Mul(b Float16) Float16 {
+	if a.IsNaN() || b.IsNaN() {
+		// anything * NaN = NaN
+		// NaN * anything = NaN
+		return propagateNaN(a, b)
+	}
+
 	signA := a & signMask16
 	expA := int((a>>shift16)&mask16) - bias16
 	signB := b & signMask16
 	expB := int((b>>shift16)&mask16) - bias16
 
 	if expA == mask16-bias16 {
-		if a&fracMask16 == 0 {
-			// a is infinity
-			if expB == mask16-bias16 && b&fracMask16 != 0 {
-				// b is NaN, the result is NaN
-				return b
-			} else if expB == -bias16 && b&fracMask16 == 0 {
-				// b is zero, the result is NaN
-				return Float16(uvnan)
-			} else {
-				// otherwise the result is infinity
-				return a ^ signB
-			}
+		// NaN check is done above; b is ±inf
+		if expB == -bias16 && b&fracMask16 == 0 {
+			// b is zero, the result is NaN
+			return Float16(uvnan)
 		} else {
-			// a is NaN
-			return a
+			// otherwise the result is infinity
+			return a ^ signB
 		}
 	}
 
 	if expB == mask16-bias16 {
-		if b&fracMask16 == 0 {
-			// b is infinity
-			if expA == -bias16 && a&fracMask16 == 0 {
-				// a is zero, the result is NaN
-				return Float16(uvnan)
-			} else {
-				// NaN check is done above
-				// so a is not zero nor NaN. the result is infinity
-				return b ^ signA
-			}
+		// NaN check is done above; b is ±inf
+		if expA == -bias16 && a&fracMask16 == 0 {
+			// a is zero, the result is NaN
+			return Float16(uvnan)
 		} else {
-			// b is NaN
-			return b
+			// NaN check is done above
+			// so a is not zero nor NaN. the result is infinity
+			return b ^ signA
 		}
 	}
 
