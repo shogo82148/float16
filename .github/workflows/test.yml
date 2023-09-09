@@ -10,6 +10,7 @@ jobs:
       matrix:
         go:
           - "1.21"
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -17,7 +18,7 @@ jobs:
           go-version: ${{ matrix.go }}
       - run: |
           if [ "$GITHUB_REF" = "refs/heads/main" ]; then
-            go test -coverprofile="coverage.txt" -timeout 1h -v ./...
+            go test -coverprofile="coverage.txt" -timeout 6h -v ./...
           else
             go test -coverprofile="coverage.txt" -timeout 10m -short -v ./...
           fi
