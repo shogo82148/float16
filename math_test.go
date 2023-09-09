@@ -627,6 +627,12 @@ func TestEq(t *testing.T) {
 		if want != got {
 			t.Errorf("%x == %x: expected %t, got %t", tt.a, tt.b, want, got)
 		}
+
+		want = tt.a != tt.b
+		got = fa.Ne(fb)
+		if want != got {
+			t.Errorf("%x != %x: expected %t, got %t", tt.a, tt.b, want, got)
+		}
 	}
 }
 

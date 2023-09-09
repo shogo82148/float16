@@ -336,3 +336,9 @@ func (a Float16) Eq(b Float16) bool {
 	// or if they are both ±0.
 	return a == b || (a|b)&^signMask16 == 0
 }
+
+// Ne returns a != b.
+// NaNs are not equal to anything, including NaN.
+func (a Float16) Ne(b Float16) bool {
+	return !a.Eq(b)
+}
