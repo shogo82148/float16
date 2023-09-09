@@ -88,7 +88,7 @@ func FromFloat32(f float32) Float16 {
 			return Float16(sign | (mask16 << shift16))
 		} else {
 			// NaN
-			return Float16(uvnan)
+			return Float16(sign | 0x7e00 | uint16(frac>>(shift32-shift16)&fracMask16))
 		}
 	}
 

@@ -75,7 +75,7 @@ func TestFromFloat32(t *testing.T) {
 		{float32(math.Inf(-1)), 0xfc00},
 
 		// NaN
-		{float32(math.NaN()), 0x7e01},
+		{float32(math.NaN()), 0x7e00},
 	}
 	for _, tt := range tests {
 		r := FromFloat32(tt.f)
