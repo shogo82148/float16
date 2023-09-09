@@ -97,15 +97,17 @@ func (a Float16) Mul(b Float16) Float16 {
 
 // Quo returns the IEEE 754 binary64 quotient of a and b.
 func (a Float16) Quo(b Float16) Float16 {
+	if a.IsNaN() || b.IsNaN() {
+		// anything / NaN = NaN
+		// NaN / anything = NaN
+		return propagateNaN(a, b)
+	}
+
 	signA := a & signMask16
 	expA := int((a>>shift16)&mask16) - bias16
 	signB := b & signMask16
 	expB := int((b>>shift16)&mask16) - bias16
 	sign := signA ^ signB
-
-	if a.IsNaN() {
-		return a
-	}
 
 	if b&^signMask16 == 0x0000 {
 		// division by zero
@@ -119,37 +121,23 @@ func (a Float16) Quo(b Float16) Float16 {
 		return sign | (mask16 << shift16)
 	}
 	if expA == mask16-bias16 {
-		// a is NaN or infinity
-		if a&fracMask16 == 0 {
-			// a is infinity
-			if expB == mask16-bias16 {
-				// +Inf / ±Inf = NaN
-				// -Inf / ±Inf = NaN
-				// ±Inf / NaN = NaN
-				return Float16(uvnan)
-			} else {
-				// otherwise the result is infinity
-				return a ^ signB
-			}
+		// NaN check is done above; a is ±Inf
+		if expB == mask16-bias16 {
+			// +Inf / ±Inf = NaN
+			// -Inf / ±Inf = NaN
+			// ±Inf / NaN = NaN
+			return Float16(uvnan)
 		} else {
-			// a is NaN
-			return a
+			// otherwise the result is infinity
+			return a ^ signB
 		}
 	}
 
 	if expB == mask16-bias16 {
-		// b is NaN or infinity
-		if b&fracMask16 == 0 {
-			// b is infinity
-			// NaN check is done above
-			// so a is not zero nor NaN.
-			// +x / ±Inf = ±0
-			// -x / ±Inf = ∓0
-			return sign
-		} else {
-			// b is NaN
-			return b
-		}
+		// NaN check is done above; b is ±Inf
+		// +x / ±Inf = ±0
+		// -x / ±Inf = ∓0
+		return sign
 	}
 
 	var fracA uint32

@@ -320,6 +320,18 @@ func TestQuo(t *testing.T) {
 	}
 }
 
+//go:generate sh -c "perl scripts/f16_div.pl | gofmt > f16_div_test.go"
+func TestQuo_TestFloat(t *testing.T) {
+	for _, tt := range f16Div {
+		fa := tt.a
+		fb := tt.b
+		got := fa.Quo(fb)
+		if got != tt.want {
+			t.Errorf("%x / %x: expected %x, got %x", tt.a, tt.b, tt.want, got)
+		}
+	}
+}
+
 func TestQuo_All(t *testing.T) {
 	f := func(a, b uint16) uint16 {
 		fa := Float16(a)
