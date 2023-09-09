@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"errors"
 	"math"
+	"math/big"
 	"runtime"
 	"sync"
 	"testing"
@@ -247,9 +248,22 @@ func TestQuo(t *testing.T) {
 		{0x1p+15, 0.5, math.Inf(1)},
 		{0x1p-14, 2, 0x1p-15},
 		{0x1p-24, 0x1p-24, 1},
+		{0x1.144p+11, 0x1.d18p-05, 0x1.2fcp+15},
+		{0x1.e7p+10, 0x1.0acp-04, 0x1.d34p+14},
+		{0x1.cp-21, 0x1.1p-20, 0x1.a5cp-01},
+		{0x1.bf4p-05, 0x1.dp+09, 0x1.ed8p-15},
 
+		// NaN / anything = NaN
 		{math.NaN(), 1, math.NaN()},
+		{math.NaN(), 0, math.NaN()},
+		{math.NaN(), negZero, math.NaN()},
+		{math.NaN(), math.Inf(1), math.NaN()},
+		{math.NaN(), math.Inf(-1), math.NaN()},
+
+		// anything / NaN = NaN
 		{1, math.NaN(), math.NaN()},
+		{0, math.NaN(), math.NaN()},
+		{negZero, math.NaN(), math.NaN()},
 
 		{math.Inf(1), 1, math.Inf(1)},
 		{math.Inf(1), 0, math.Inf(1)},
@@ -259,10 +273,14 @@ func TestQuo(t *testing.T) {
 		{1, 0, math.Inf(1)},
 
 		// 0 / 0
-		{negZero, 0, math.Inf(-1)},
-		{0, negZero, math.Inf(-1)},
+		{negZero, 0, math.NaN()},
+		{0, negZero, math.NaN()},
 		{0, 0, math.NaN()},
 		{negZero, negZero, math.NaN()},
+
+		// 0 / anything = 0
+		{0, 1, 0},
+		{0, -1, negZero},
 	}
 
 	for _, tt := range tests {
@@ -285,53 +303,36 @@ func TestQuo(t *testing.T) {
 	}
 }
 
-// func TestQuoQuick(t *testing.T) {
-// 	f := func(a, b uint16) uint16 {
-// 		fa := Float16(a)
-// 		fb := Float16(b)
-// 		fc := fa.Quo(fb)
-// 		if fc.IsNaN() {
-// 			return NaN().Bits()
-// 		}
-// 		return fc.Bits()
-// 	}
+func TestQuo_All(t *testing.T) {
+	f := func(a, b uint16) uint16 {
+		fa := Float16(a)
+		fb := Float16(b)
+		fc := fa.Quo(fb)
+		if fc.IsNaN() {
+			return NaN().Bits()
+		}
+		return fc.Bits()
+	}
 
-// 	g := func(a, b uint16) uint16 {
-// 		fa := Float16(a).Float64()
-// 		if math.IsNaN(fa) {
-// 			return NaN().Bits()
-// 		}
-// 		bigA := new(big.Float).SetFloat64(fa)
-// 		fb := Float16(b).Float64()
-// 		if math.IsNaN(fb) {
-// 			return NaN().Bits()
-// 		}
-// 		bigB := new(big.Float).SetFloat64(fb)
-// 		fc := new(big.Float).SetPrec(11).Quo(bigA, bigB)
-// 		f64, _ := fc.Float64()
-// 		return FromFloat64(f64).Bits()
-// 	}
+	g := func(a, b uint16) uint16 {
+		fa := Float16(a).Float64()
+		fb := Float16(b).Float64()
 
-// 	if err := quick.CheckEqual(f, g, &quick.Config{
-// 		MaxCountScale: 100,
-// 	}); err != nil {
-// 		var checkErr *quick.CheckEqualError
-// 		if errors.As(err, &checkErr) {
-// 			a := checkErr.In[0].(uint16)
-// 			b := checkErr.In[1].(uint16)
-// 			c1 := checkErr.Out1[0].(uint16)
-// 			c2 := checkErr.Out2[0].(uint16)
+		if math.IsNaN(fa) || math.IsNaN(fb) || math.IsInf(fa, 0) || math.IsInf(fb, 0) || fb == 0 {
+			// big.Float can't handle these special cases.
+			return FromFloat64(fa / fb).Bits()
+		}
 
-// 			fa := FromBits(a).Float64()
-// 			fb := FromBits(b).Float64()
-// 			fc1 := FromBits(c1).Float64()
-// 			fc2 := FromBits(c2).Float64()
+		bigA := new(big.Float).SetFloat64(fa)
+		bigB := new(big.Float).SetFloat64(fb)
+		bigC := new(big.Float).SetPrec(53).SetMode(big.AwayFromZero)
+		bigC = bigC.Quo(bigA, bigB)
+		f64, _ := bigC.Float64()
+		return FromFloat64(f64).Bits()
+	}
 
-// 			t.Errorf("%x / %x: got %x, expected %x", fa, fb, fc1, fc2)
-// 		}
-// 		t.Error(err)
-// 	}
-// }
+	checkEqual(t, f, g, "/")
+}
 
 func TestAdd(t *testing.T) {
 	tests := []struct {
