@@ -514,6 +514,7 @@ func TestCmp(t *testing.T) {
 		{math.NaN(), 1},
 		{math.NaN(), math.Inf(1)},
 		{math.NaN(), math.Inf(-1)},
+		{math.NaN(), math.NaN()},
 
 		// negative zero
 		{0, 0},
@@ -568,5 +569,84 @@ func BenchmarkCompare2(b *testing.B) {
 		fa, fb := x.Float16Pair()
 		c := cmp.Compare(fa.Float64(), fb.Float64())
 		runtime.KeepAlive(c)
+	}
+}
+
+func TestEq(t *testing.T) {
+	tests := []struct {
+		a, b float64
+	}{
+		// positive numbers
+		{1, 1},
+		{1, 2},
+		{2, 1},
+
+		// negative numbers
+		{-1, -1},
+		{-1, -2},
+		{-2, -1},
+
+		// positive and negative numbers
+		{-1, 1},
+		{1, -1},
+		{-2, 1},
+		{2, -1},
+
+		// infinity
+		{math.Inf(1), 1},
+		{math.Inf(-1), -1},
+		{math.Inf(1), math.Inf(1)},
+		{math.Inf(1), math.Inf(-1)},
+		{math.Inf(-1), math.Inf(1)},
+		{math.Inf(-1), math.Inf(-1)},
+
+		// a NaN is not equal to any number, including NaN
+		{math.NaN(), 0},
+		{math.NaN(), 1},
+		{math.NaN(), math.Inf(1)},
+		{math.NaN(), math.Inf(-1)},
+		{math.NaN(), math.NaN()},
+
+		// negative zero
+		{0, 0},
+		{negZero, 0},
+		{0, negZero},
+		{negZero, negZero},
+	}
+	for _, tt := range tests {
+		fa := FromFloat64(tt.a)
+		if !fa.IsNaN() && fa.Float64() != tt.a {
+			t.Errorf("%x + %x: invalid test case: converting %x to float16 loss data", tt.a, tt.b, tt.a)
+		}
+		fb := FromFloat64(tt.b)
+		if !fb.IsNaN() && fb.Float64() != tt.b {
+			t.Errorf("%x + %x: invalid test case: converting %x to float16 loss data", tt.a, tt.b, tt.b)
+		}
+		want := tt.a == tt.b
+		got := fa.Eq(fb)
+		if want != got {
+			t.Errorf("%x == %x: expected %t, got %t", tt.a, tt.b, want, got)
+		}
+	}
+}
+
+//go:generate sh -c "perl scripts/f16_eq.pl | gofmt > f16_eq_test.go"
+
+func TestEq_TestFloat(t *testing.T) {
+	for _, tt := range f16Eq {
+		fa := tt.a
+		fb := tt.b
+		got := fa.Eq(fb)
+		if got != tt.want {
+			t.Errorf("%x == %x: expected %t, got %t", tt.a, tt.b, tt.want, got)
+		}
+	}
+}
+
+func BenchmarkEq(b *testing.B) {
+	x := newXorshift32()
+	for i := 0; i < b.N; i++ {
+		fa, fb := x.Float16Pair()
+		runtime.KeepAlive(fa.Eq(fb))
 	}
 }

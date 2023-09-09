@@ -324,3 +324,15 @@ func (a Float16) Compare(b Float16) int {
 	}
 	return 0
 }
+
+// Eq returns a == b.
+// NaNs are not equal to anything, including NaN.
+func (a Float16) Eq(b Float16) bool {
+	if a.IsNaN() || b.IsNaN() {
+		return false
+	}
+
+	// a == b if a and b have the same bit pattern,
+	// or if they are both ±0.
+	return a == b || (a|b)&^signMask16 == 0
+}
