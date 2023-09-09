@@ -224,31 +224,25 @@ func squash(x uint16) uint16 {
 
 // Add returns the IEEE 754 binary64 sum of a and b.
 func (a Float16) Add(b Float16) Float16 {
-	if a == 0x8000 { // a is negative zero
+	if a.IsNaN() || b.IsNaN() {
+		// anything + NaN = NaN
+		// NaN + anything = NaN
+		return propagateNaN(a, b)
+	}
+	if a^signMask16 == 0 { // a is ±0
 		return b
 	}
 
 	if (a>>shift16)&mask16 == mask16 {
-		// a is NaN or infinity
+		// NaN is already handled; a is ±inf
 		if a&fracMask16 == 0 {
 			// a is infinity
 			if b == a^signMask16 {
 				// ±inf + ∓inf = NaN
 				return NaN()
 			}
-			if b.IsNaN() {
-				// anything + NaN = NaN
-				return uvnan
-			}
 			return a // ±inf + anything = ±inf
-		} else {
-			// a is NaN
-			return uvnan
 		}
-	}
-	if b.IsNaN() {
-		// anything + NaN = NaN
-		return uvnan
 	}
 
 	fixA := a.fix24()

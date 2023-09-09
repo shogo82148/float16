@@ -403,6 +403,18 @@ func TestAdd(t *testing.T) {
 	}
 }
 
+//go:generate sh -c "perl scripts/f16_add.pl | gofmt > f16_add_test.go"
+func TestAdd_TestFloat(t *testing.T) {
+	for _, tt := range f16Add {
+		fa := tt.a
+		fb := tt.b
+		got := fa.Add(fb)
+		if got != tt.want {
+			t.Errorf("%x + %x: expected %x, got %x", tt.a, tt.b, tt.want, got)
+		}
+	}
+}
+
 func TestAdd_All(t *testing.T) {
 	f := func(a, b uint16) uint16 {
 		fa := Float16(a)
