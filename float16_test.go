@@ -75,12 +75,23 @@ func TestFromFloat32(t *testing.T) {
 		{float32(math.Inf(-1)), 0xfc00},
 
 		// NaN
-		{float32(math.NaN()), 0x7e01},
+		{float32(math.NaN()), 0x7e00},
 	}
 	for _, tt := range tests {
 		r := FromFloat32(tt.f)
 		if r != tt.r {
 			t.Errorf("%x: expected %x, got %x", tt.f, tt.r, r)
+		}
+	}
+}
+
+//go:generate sh -c "perl scripts/f32_to_f16.pl | gofmt > f32_to_f16_test.go"
+func TestFromFloat32_TestFloat(t *testing.T) {
+	for _, tt := range f32ToF16 {
+		f32 := math.Float32frombits(tt.f32)
+		got := FromFloat32(f32)
+		if got.Bits() != tt.f16 {
+			t.Errorf("%08x: expected %04x, got %04x", tt.f32, tt.f16, got.Bits())
 		}
 	}
 }
@@ -135,12 +146,23 @@ func TestFromFloat64(t *testing.T) {
 		{math.Inf(-1), 0xfc00},
 
 		// NaN
-		{math.NaN(), 0x7e01},
+		{math.NaN(), 0x7e00},
 	}
 	for _, tt := range tests {
 		r := FromFloat64(tt.f)
 		if r != tt.r {
 			t.Errorf("%x: expected %x, got %x", tt.f, tt.r, r)
+		}
+	}
+}
+
+//go:generate sh -c "perl scripts/f64_to_f16.pl | gofmt > f64_to_f16_test.go"
+func TestFromFloat64_TestFloat(t *testing.T) {
+	for _, tt := range f64ToF16 {
+		f64 := math.Float64frombits(tt.f64)
+		got := FromFloat64(f64)
+		if got.Bits() != tt.f16 {
+			t.Errorf("%016x: expected %04x, got %04x", tt.f64, tt.f16, got.Bits())
 		}
 	}
 }

@@ -6,44 +6,37 @@ import (
 
 // Mul returns the IEEE 754 binary64 product of a and b.
 func (a Float16) Mul(b Float16) Float16 {
+	if a.IsNaN() || b.IsNaN() {
+		// anything * NaN = NaN
+		// NaN * anything = NaN
+		return propagateNaN(a, b)
+	}
+
 	signA := a & signMask16
 	expA := int((a>>shift16)&mask16) - bias16
 	signB := b & signMask16
 	expB := int((b>>shift16)&mask16) - bias16
 
 	if expA == mask16-bias16 {
-		if a&fracMask16 == 0 {
-			// a is infinity
-			if expB == mask16-bias16 && b&fracMask16 != 0 {
-				// b is NaN, the result is NaN
-				return b
-			} else if expB == -bias16 && b&fracMask16 == 0 {
-				// b is zero, the result is NaN
-				return Float16(uvnan)
-			} else {
-				// otherwise the result is infinity
-				return a ^ signB
-			}
+		// NaN check is done above; b is ±inf
+		if expB == -bias16 && b&fracMask16 == 0 {
+			// b is zero, the result is NaN
+			return Float16(uvnan)
 		} else {
-			// a is NaN
-			return a
+			// otherwise the result is infinity
+			return a ^ signB
 		}
 	}
 
 	if expB == mask16-bias16 {
-		if b&fracMask16 == 0 {
-			// b is infinity
-			if expA == -bias16 && a&fracMask16 == 0 {
-				// a is zero, the result is NaN
-				return Float16(uvnan)
-			} else {
-				// NaN check is done above
-				// so a is not zero nor NaN. the result is infinity
-				return b ^ signA
-			}
+		// NaN check is done above; b is ±inf
+		if expA == -bias16 && a&fracMask16 == 0 {
+			// a is zero, the result is NaN
+			return Float16(uvnan)
 		} else {
-			// b is NaN
-			return b
+			// NaN check is done above
+			// so a is not zero nor NaN. the result is infinity
+			return b ^ signA
 		}
 	}
 
@@ -104,15 +97,17 @@ func (a Float16) Mul(b Float16) Float16 {
 
 // Quo returns the IEEE 754 binary64 quotient of a and b.
 func (a Float16) Quo(b Float16) Float16 {
+	if a.IsNaN() || b.IsNaN() {
+		// anything / NaN = NaN
+		// NaN / anything = NaN
+		return propagateNaN(a, b)
+	}
+
 	signA := a & signMask16
 	expA := int((a>>shift16)&mask16) - bias16
 	signB := b & signMask16
 	expB := int((b>>shift16)&mask16) - bias16
 	sign := signA ^ signB
-
-	if a.IsNaN() {
-		return a
-	}
 
 	if b&^signMask16 == 0x0000 {
 		// division by zero
@@ -126,37 +121,23 @@ func (a Float16) Quo(b Float16) Float16 {
 		return sign | (mask16 << shift16)
 	}
 	if expA == mask16-bias16 {
-		// a is NaN or infinity
-		if a&fracMask16 == 0 {
-			// a is infinity
-			if expB == mask16-bias16 {
-				// +Inf / ±Inf = NaN
-				// -Inf / ±Inf = NaN
-				// ±Inf / NaN = NaN
-				return Float16(uvnan)
-			} else {
-				// otherwise the result is infinity
-				return a ^ signB
-			}
+		// NaN check is done above; a is ±Inf
+		if expB == mask16-bias16 {
+			// +Inf / ±Inf = NaN
+			// -Inf / ±Inf = NaN
+			// ±Inf / NaN = NaN
+			return Float16(uvnan)
 		} else {
-			// a is NaN
-			return a
+			// otherwise the result is infinity
+			return a ^ signB
 		}
 	}
 
 	if expB == mask16-bias16 {
-		// b is NaN or infinity
-		if b&fracMask16 == 0 {
-			// b is infinity
-			// NaN check is done above
-			// so a is not zero nor NaN.
-			// +x / ±Inf = ±0
-			// -x / ±Inf = ∓0
-			return sign
-		} else {
-			// b is NaN
-			return b
-		}
+		// NaN check is done above; b is ±Inf
+		// +x / ±Inf = ±0
+		// -x / ±Inf = ∓0
+		return sign
 	}
 
 	var fracA uint32
@@ -224,31 +205,25 @@ func squash(x uint16) uint16 {
 
 // Add returns the IEEE 754 binary64 sum of a and b.
 func (a Float16) Add(b Float16) Float16 {
-	if a == 0x8000 { // a is negative zero
+	if a.IsNaN() || b.IsNaN() {
+		// anything + NaN = NaN
+		// NaN + anything = NaN
+		return propagateNaN(a, b)
+	}
+	if a^signMask16 == 0 { // a is ±0
 		return b
 	}
 
 	if (a>>shift16)&mask16 == mask16 {
-		// a is NaN or infinity
+		// NaN is already handled; a is ±inf
 		if a&fracMask16 == 0 {
 			// a is infinity
 			if b == a^signMask16 {
 				// ±inf + ∓inf = NaN
 				return NaN()
 			}
-			if b.IsNaN() {
-				// anything + NaN = NaN
-				return uvnan
-			}
 			return a // ±inf + anything = ±inf
-		} else {
-			// a is NaN
-			return uvnan
 		}
-	}
-	if b.IsNaN() {
-		// anything + NaN = NaN
-		return uvnan
 	}
 
 	fixA := a.fix24()

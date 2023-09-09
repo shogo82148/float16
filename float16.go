@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	uvnan      = 0x7e01     // "not-a-number"
+	uvnan      = 0x7e00     // "not-a-number"
 	uvinf      = 0x7c00     // infinity
 	uvneginf   = 0xfc00     // negative infinity
 	uvone      = 0x3c00     // one
@@ -35,16 +35,6 @@ const (
 
 // Float16 represents a 16-bit floating point number.
 type Float16 uint16
-
-// NaN returns an IEEE 754 “not-a-number” value.
-func NaN() Float16 {
-	return Float16(uvnan)
-}
-
-// IsNaN reports whether f is an IEEE 754 “not-a-number” value.
-func (f Float16) IsNaN() bool {
-	return f&(mask16<<shift16) == (mask16<<shift16) && f&fracMask16 != 0
-}
 
 // Inf returns positive infinity if sign >= 0, negative infinity if sign < 0.
 func Inf(sign int) Float16 {
@@ -88,7 +78,7 @@ func FromFloat32(f float32) Float16 {
 			return Float16(sign | (mask16 << shift16))
 		} else {
 			// NaN
-			return Float16(uvnan)
+			return Float16(sign | uvnan | uint16(frac>>(shift32-shift16)&fracMask16))
 		}
 	}
 
@@ -132,7 +122,7 @@ func FromFloat64(f float64) Float16 {
 			return Float16(sign | (mask16 << shift16))
 		} else {
 			// NaN
-			return Float16(uvnan)
+			return Float16(sign | uvnan | uint16(frac>>(shift64-shift16)&fracMask16))
 		}
 	}
 
@@ -210,4 +200,39 @@ func (f Float16) Float64() float64 {
 		exp += bias64 - bias16
 	}
 	return math.Float64frombits(sign | (exp << shift64) | (frac << (shift64 - shift16)))
+}
+
+// NaN returns an IEEE 754 “not-a-number” value.
+func NaN() Float16 {
+	return Float16(uvnan)
+}
+
+// IsNaN reports whether f is an IEEE 754 “not-a-number” value.
+func (f Float16) IsNaN() bool {
+	return f&(mask16<<shift16) == (mask16<<shift16) && f&fracMask16 != 0
+}
+
+func (f Float16) isSignalingNaN() bool {
+	exp := (f >> shift16) & mask16
+	frac := f & fracMask16
+	return exp == mask16 && frac != 0 && frac&0x200 == 0
+}
+
+func (f Float16) isQuietNaN() bool {
+	exp := (f >> shift16) & mask16
+	frac := f & fracMask16
+	return exp == mask16 && frac != 0 && frac&0x200 != 0
+}
+
+func propagateNaN(a, b Float16) Float16 {
+	if a.isSignalingNaN() {
+		return a | 0x0200
+	}
+	if b.isSignalingNaN() {
+		return b | 0x0200
+	}
+	if a.isQuietNaN() {
+		return a | 0x0200
+	}
+	return b | 0x0200
 }

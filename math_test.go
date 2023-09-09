@@ -37,6 +37,7 @@ func (x *xorshift32) Float16Pair() (Float16, Float16) {
 }
 
 func checkEqual(t *testing.T, f, g func(a, b uint16) uint16, op string) {
+	t.Helper()
 	if testing.Short() {
 		if err := quick.CheckEqual(f, g, &quick.Config{
 			MaxCountScale: 100,
@@ -193,8 +194,21 @@ func TestMul(t *testing.T) {
 		}
 		fr := FromFloat64(tt.a * tt.b)
 		fc := fa.Mul(fb)
-		if fc != fr {
+		if fc.Compare(fr) != 0 {
 			t.Errorf("%x * %x: expected %x (0x%04x), got %x (0x%04x)", tt.a, tt.b, fr.Float64(), fr, fc.Float64(), fc)
+		}
+	}
+}
+
+//go:generate sh -c "perl scripts/f16_mul.pl | gofmt > f16_mul_test.go"
+
+func TestMul_TestFloat(t *testing.T) {
+	for _, tt := range f16Mul {
+		fa := tt.a
+		fb := tt.b
+		got := fa.Mul(fb)
+		if got != tt.want {
+			t.Errorf("%x * %x: expected %x, got %x", tt.a, tt.b, tt.want, got)
 		}
 	}
 }
@@ -231,6 +245,9 @@ func TestMul_All(t *testing.T) {
 		fa := Float16(a).Float64()
 		fb := Float16(b).Float64()
 		fc := fa * fb // This calculation does not cause any rounding.
+		if math.IsNaN(fc) {
+			return NaN().Bits()
+		}
 		return FromFloat64(fc).Bits()
 	}
 
@@ -297,8 +314,20 @@ func TestQuo(t *testing.T) {
 			t.Errorf("%x + %x: invalid test case: converting %x to float16 loss data", tt.a, tt.b, tt.b)
 		}
 		fc := fa.Quo(fb)
-		if fc != fr {
+		if fc.Compare(fr) != 0 {
 			t.Errorf("%x / %x: expected %x (0x%04x), got %x (0x%04x)", tt.a, tt.b, fr.Float64(), fr, fc.Float64(), fc)
+		}
+	}
+}
+
+//go:generate sh -c "perl scripts/f16_div.pl | gofmt > f16_div_test.go"
+func TestQuo_TestFloat(t *testing.T) {
+	for _, tt := range f16Div {
+		fa := tt.a
+		fb := tt.b
+		got := fa.Quo(fb)
+		if got != tt.want {
+			t.Errorf("%x / %x: expected %x, got %x", tt.a, tt.b, tt.want, got)
 		}
 	}
 }
@@ -320,7 +349,11 @@ func TestQuo_All(t *testing.T) {
 
 		if math.IsNaN(fa) || math.IsNaN(fb) || math.IsInf(fa, 0) || math.IsInf(fb, 0) || fb == 0 {
 			// big.Float can't handle these special cases.
-			return FromFloat64(fa / fb).Bits()
+			fc := FromFloat64(fa / fb)
+			if fc.IsNaN() {
+				return NaN().Bits()
+			}
+			return fc.Bits()
 		}
 
 		bigA := new(big.Float).SetFloat64(fa)
@@ -383,14 +416,26 @@ func TestAdd(t *testing.T) {
 		}
 		fr := FromFloat64(tt.a + tt.b)
 		fc := fa.Add(fb)
-		if fc != fr {
+		if fc.Compare(fr) != 0 {
 			t.Errorf("%x + %x: expected %x (0x%04x), got %x (0x%04x)", tt.a, tt.b, fr.Float64(), fr, fc.Float64(), fc)
 		}
 
 		fr = FromFloat64(tt.b - tt.a)
 		fc = fb.Sub(fa)
-		if fc != fr {
+		if fc.Compare(fr) != 0 {
 			t.Errorf("%x - %x: expected %x (0x%04x), got %x (0x%04x)", tt.b, tt.a, fr.Float64(), fr, fc.Float64(), fc)
+		}
+	}
+}
+
+//go:generate sh -c "perl scripts/f16_add.pl | gofmt > f16_add_test.go"
+func TestAdd_TestFloat(t *testing.T) {
+	for _, tt := range f16Add {
+		fa := tt.a
+		fb := tt.b
+		got := fa.Add(fb)
+		if got != tt.want {
+			t.Errorf("%x + %x: expected %x, got %x", tt.a, tt.b, tt.want, got)
 		}
 	}
 }
@@ -410,6 +455,9 @@ func TestAdd_All(t *testing.T) {
 		fa := Float16(a).Float64()
 		fb := Float16(b).Float64()
 		fc := fa + fb // This calculation does not cause any rounding.
+		if math.IsNaN(fc) {
+			return NaN().Bits()
+		}
 		return FromFloat64(fc).Bits()
 	}
 
