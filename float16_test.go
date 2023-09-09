@@ -145,6 +145,17 @@ func TestFromFloat64(t *testing.T) {
 	}
 }
 
+//go:generate sh -c "perl scripts/f64_to_f16.pl | gofmt > f64_to_f16_test.go"
+func TestFromFloat64_TestFloat(t *testing.T) {
+	for _, tt := range f64ToF16 {
+		f64 := math.Float64frombits(tt.f64)
+		got := FromFloat64(f64)
+		if got.Bits() != tt.f16 {
+			t.Errorf("%016x: expected %04x, got %04x", tt.f64, tt.f16, got.Bits())
+		}
+	}
+}
+
 func TestFromFloat64_All(t *testing.T) {
 	for bits := 0; bits < 1<<16; bits++ {
 		f := FromBits(uint16(bits))
