@@ -317,14 +317,14 @@ func (f fix24) Float16() Float16 {
 	return Float16(sign | (exp << shift16) | frac)
 }
 
-// Cmp compares x and y and returns:
+// Compare compares x and y and returns:
 //
 //	-1 if x <  y
 //	 0 if x == y (incl. -0 == 0, -Inf == -Inf, and +Inf == +Inf)
 //	+1 if x >  y
 //
 // a NaN is considered less than any non-NaN, and two NaNs are equal.
-func (a Float16) Cmp(b Float16) int {
+func (a Float16) Compare(b Float16) int {
 	aNaN := a.IsNaN()
 	bNaN := b.IsNaN()
 	if aNaN && bNaN {

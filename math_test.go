@@ -483,7 +483,7 @@ func TestCmp(t *testing.T) {
 			t.Errorf("%x + %x: invalid test case: converting %x to float16 loss data", tt.a, tt.b, tt.b)
 		}
 		fr := cmp.Compare(tt.a, tt.b)
-		fc := fa.Cmp(fb)
+		fc := fa.Compare(fb)
 		if fc != fr {
 			t.Errorf("%x <=> %x: expected %d, got %d", tt.a, tt.b, fr, fc)
 		}
@@ -494,7 +494,7 @@ func TestCmp_All(t *testing.T) {
 	f := func(a, b uint16) int {
 		fa := Float16(a)
 		fb := Float16(b)
-		return fa.Cmp(fb)
+		return fa.Compare(fb)
 	}
 
 	g := func(a, b uint16) int {
@@ -506,15 +506,15 @@ func TestCmp_All(t *testing.T) {
 	checkEqualInt(t, f, g, "<=>")
 }
 
-func BenchmarkCmp(b *testing.B) {
+func BenchmarkCompare(b *testing.B) {
 	x := newXorshift32()
 	for i := 0; i < b.N; i++ {
 		fa, fb := x.Float16Pair()
-		runtime.KeepAlive(fa.Cmp(fb))
+		runtime.KeepAlive(fa.Compare(fb))
 	}
 }
 
-func BenchmarkCmp2(b *testing.B) {
+func BenchmarkCompare2(b *testing.B) {
 	x := newXorshift32()
 	for i := 0; i < b.N; i++ {
 		fa, fb := x.Float16Pair()
