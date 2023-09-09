@@ -312,10 +312,8 @@ func (a Float16) Compare(b Float16) int {
 		return 1
 	}
 
-	ia := int16(a) ^ ((int16(a) >> 15) & 0x7fff)
-	ia += int16(a >> 15)
-	ib := int16(b) ^ ((int16(b) >> 15) & 0x7fff)
-	ib += int16(b >> 15)
+	ia := a.comparable()
+	ib := b.comparable()
 	if ia < ib {
 		return -1
 	}
@@ -323,6 +321,12 @@ func (a Float16) Compare(b Float16) int {
 		return 1
 	}
 	return 0
+}
+
+// comparable converts a to a comparable form.
+func (a Float16) comparable() int16 {
+	i := int16(a) ^ ((int16(a) >> 15) & 0x7fff)
+	return i + int16(a>>15) // normalize -0 to 0
 }
 
 // Eq returns a == b.
@@ -341,4 +345,28 @@ func (a Float16) Eq(b Float16) bool {
 // NaNs are not equal to anything, including NaN.
 func (a Float16) Ne(b Float16) bool {
 	return !a.Eq(b)
+}
+
+// Lt returns a < b.
+//
+// Special cases are:
+//
+//	Lt(NaN, x) == false
+//	Lt(x, NaN) == false
+func (a Float16) Lt(b Float16) bool {
+	if a.IsNaN() || b.IsNaN() {
+		return false
+	}
+
+	return a.comparable() < b.comparable()
+}
+
+// Gt returns a > b.
+//
+// Special cases are:
+//
+//	Gt(x, NaN) == false
+//	Gt(NaN, x) == false
+func (a Float16) Gt(b Float16) bool {
+	return b.Lt(a)
 }

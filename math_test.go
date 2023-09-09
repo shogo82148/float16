@@ -622,8 +622,10 @@ func TestEq(t *testing.T) {
 		if !fb.IsNaN() && fb.Float64() != tt.b {
 			t.Errorf("%x + %x: invalid test case: converting %x to float16 loss data", tt.a, tt.b, tt.b)
 		}
-		want := tt.a == tt.b
-		got := fa.Eq(fb)
+		var want, got bool
+
+		want = tt.a == tt.b
+		got = fa.Eq(fb)
 		if want != got {
 			t.Errorf("%x == %x: expected %t, got %t", tt.a, tt.b, want, got)
 		}
@@ -632,6 +634,18 @@ func TestEq(t *testing.T) {
 		got = fa.Ne(fb)
 		if want != got {
 			t.Errorf("%x != %x: expected %t, got %t", tt.a, tt.b, want, got)
+		}
+
+		want = tt.a < tt.b
+		got = fa.Lt(fb)
+		if want != got {
+			t.Errorf("%x < %x: expected %t, got %t", tt.a, tt.b, want, got)
+		}
+
+		want = tt.a > tt.b
+		got = fa.Gt(fb)
+		if want != got {
+			t.Errorf("%x > %x: expected %t, got %t", tt.a, tt.b, want, got)
 		}
 	}
 }
@@ -649,10 +663,31 @@ func TestEq_TestFloat(t *testing.T) {
 	}
 }
 
+//go:generate sh -c "perl scripts/f16_lt.pl | gofmt > f16_lt_test.go"
+
+func TestLt_TestFloat(t *testing.T) {
+	for _, tt := range f16Lt {
+		fa := tt.a
+		fb := tt.b
+		got := fa.Lt(fb)
+		if got != tt.want {
+			t.Errorf("%x < %x: expected %t, got %t", tt.a, tt.b, tt.want, got)
+		}
+	}
+}
+
 func BenchmarkEq(b *testing.B) {
 	x := newXorshift32()
 	for i := 0; i < b.N; i++ {
 		fa, fb := x.Float16Pair()
 		runtime.KeepAlive(fa.Eq(fb))
+	}
+}
+
+func BenchmarkLt(b *testing.B) {
+	x := newXorshift32()
+	for i := 0; i < b.N; i++ {
+		fa, fb := x.Float16Pair()
+		runtime.KeepAlive(fa.Lt(fb))
 	}
 }
