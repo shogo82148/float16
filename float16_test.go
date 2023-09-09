@@ -85,6 +85,17 @@ func TestFromFloat32(t *testing.T) {
 	}
 }
 
+//go:generate sh -c "perl scripts/f32_to_f16.pl | gofmt > f32_to_f16_test.go"
+func TestFromFloat32_TestFloat(t *testing.T) {
+	for _, tt := range f32ToF16 {
+		f32 := math.Float32frombits(tt.f32)
+		got := FromFloat32(f32)
+		if got.Bits() != tt.f16 {
+			t.Errorf("%08x: expected %04x, got %04x", tt.f32, tt.f16, got.Bits())
+		}
+	}
+}
+
 func TestFromFloat32_All(t *testing.T) {
 	for bits := 0; bits < 1<<16; bits++ {
 		f := FromBits(uint16(bits))
