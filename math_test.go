@@ -1,11 +1,16 @@
 package float16
 
 import (
+	"bufio"
 	"cmp"
+	"compress/gzip"
 	"errors"
 	"math"
 	"math/big"
+	"os"
 	"runtime"
+	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"testing/quick"
@@ -729,5 +734,63 @@ func BenchmarkLe(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		fa, fb := x.Float16Pair()
 		runtime.KeepAlive(fa.Le(fb))
+	}
+}
+
+func TestFMA_TestFloat(t *testing.T) {
+	f, err := os.Open("testdata/f16_mulAdd.txt.gz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+
+	r, err := gzip.NewReader(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+
+	s := bufio.NewScanner(r)
+	for s.Scan() {
+		line := s.Text()
+		line = strings.TrimSpace(line)
+		seg := strings.Split(line, " ")
+		if len(seg) < 4 {
+			t.Fatal("invalid test data")
+		}
+		x, err := strconv.ParseUint(seg[0], 16, 16)
+		if err != nil {
+			t.Fatal(err)
+		}
+		y, err := strconv.ParseUint(seg[1], 16, 16)
+		if err != nil {
+			t.Fatal(err)
+		}
+		z, err := strconv.ParseUint(seg[2], 16, 16)
+		if err != nil {
+			t.Fatal(err)
+		}
+		a, err := strconv.ParseUint(seg[3], 16, 16)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		fx := Float16(x)
+		fy := Float16(y)
+		fz := Float16(z)
+		fa := Float16(a)
+		got := FMA(fx, fy, fz)
+		if got.Compare(fa) != 0 {
+			t.Errorf("%x * %x + %x: expected %x, got %x", x, y, z, fa, got)
+		}
+	}
+}
+
+func BenchmarkFMA(b *testing.B) {
+	x := newXorshift32()
+	for i := 0; i < b.N; i++ {
+		fa, fb := x.Float16Pair()
+		fc, _ := x.Float16Pair()
+		runtime.KeepAlive(FMA(fa, fb, fc))
 	}
 }

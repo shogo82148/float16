@@ -1,6 +1,7 @@
 package float16
 
 import (
+	"math"
 	"math/bits"
 )
 
@@ -393,4 +394,35 @@ func (a Float16) Le(b Float16) bool {
 //	Ge(NaN, x) == false
 func (a Float16) Ge(b Float16) bool {
 	return b.Le(a)
+}
+
+// FMA returns x * y + z, computed with only one rounding.
+// (That is, FMA returns the fused multiply-add of x, y, and z.)
+func FMA(x, y, z Float16) Float16 {
+	if x.IsNaN() || y.IsNaN() || z.IsNaN() {
+		if x.isSignalingNaN() {
+			return x | 0x2000
+		}
+		if y.isSignalingNaN() {
+			return y | 0x2000
+		}
+		if z.isSignalingNaN() {
+			return z | 0x2000
+		}
+		if z.isQuietNaN() {
+			return z | 0x2000
+		}
+		if x.isQuietNaN() {
+			return x | 0x2000
+		}
+		if y.isQuietNaN() {
+			return y | 0x2000
+		}
+	}
+
+	fx := x.Float64()
+	fy := y.Float64()
+	fz := z.Float64()
+	f := math.FMA(fx, fy, fz)
+	return FromFloat64(f)
 }
