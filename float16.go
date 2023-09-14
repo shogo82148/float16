@@ -189,17 +189,21 @@ func (f Float16) Float64() float64 {
 		if l == 0 {
 			exp = 0
 		} else {
-			frac = (frac << (shift16 - l + 1)) & fracMask16
+			frac = (frac << (shift64 - l + 1)) & fracMask64
 			exp = bias64 - (bias16 + shift16) + uint64(l)
 		}
 	} else if exp == mask16 {
 		// infinity or NaN
 		exp = mask64
+		if frac != 0 {
+			frac |= 1 << (shift64 - 1)
+		}
 	} else {
 		// normal number
 		exp += bias64 - bias16
+		frac <<= shift64 - shift16
 	}
-	return math.Float64frombits(sign | (exp << shift64) | (frac << (shift64 - shift16)))
+	return math.Float64frombits(sign | (exp << shift64) | frac)
 }
 
 // NaN returns an IEEE 754 “not-a-number” value.
