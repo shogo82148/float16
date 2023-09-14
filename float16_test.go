@@ -306,8 +306,9 @@ func BenchmarkFromFloat64(b *testing.B) {
 }
 
 func BenchmarkFloat64(b *testing.B) {
-	f := Float16(0x3555)
+	r := newXorshift32()
 	for i := 0; i < b.N; i++ {
+		f, _ := r.Float16Pair()
 		runtime.KeepAlive(f.Float64())
 	}
 }
