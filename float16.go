@@ -126,18 +126,21 @@ func FromFloat64(f float64) Float16 {
 		}
 	}
 
-	exp -= bias64
-
-	if exp <= -bias16 {
-		// handle subnormal number
-		roundBit := -exp + shift64 - (bias16 + shift16 - 1)
+	if exp <= bias64-bias16 {
+		// the result is subnormal number
+		roundBit := -exp + (bias64 + shift64 - (bias16 + shift16 - 1))
 		frac := (b & fracMask64) | (1 << shift64)
 		halfMinusULP := uint64(1<<(roundBit-1) - 1)
 		frac += halfMinusULP + ((frac >> roundBit) & 1)
 		return Float16(sign | uint16(frac>>roundBit))
 	}
 
-	// handle normal number
+	if exp >= mask16 {
+		// overflow
+		return Float16(sign | (mask16 << shift16))
+	}
+
+	// the result is normal number
 
 	// round to nearest even
 	const halfMinusULP = (1 << (shift64 - shift16 - 1)) - 1
