@@ -114,9 +114,9 @@ func FromFloat64(f float64) Float16 {
 	b := math.Float64bits(f)
 	sign := uint16((b & signMask64) >> (64 - 16))
 	exp := int((b >> shift64) & mask64)
-	frac := b & fracMask64
 
 	if exp == mask64 {
+		frac := b & fracMask64
 		if frac == 0 {
 			// infinity or negative infinity
 			return Float16(sign | (mask16 << shift16))
