@@ -161,7 +161,11 @@ func TestFromFloat64_TestFloat(t *testing.T) {
 	for _, tt := range f64ToF16 {
 		f64 := math.Float64frombits(tt.f64)
 		got := FromFloat64(f64)
-		if got.Bits() != tt.f16 {
+		want := FromBits(tt.f16)
+		if got.IsNaN() && want.IsNaN() {
+			continue
+		}
+		if got != want {
 			t.Errorf("%016x: expected %04x, got %04x", tt.f64, tt.f16, got.Bits())
 		}
 	}
@@ -285,23 +289,24 @@ func TestFloat64_Specials(t *testing.T) {
 }
 
 func BenchmarkFromFloat32(b *testing.B) {
-	f := float32(1) / 3
+	r := newXorshift32()
 	for i := 0; i < b.N; i++ {
-		runtime.KeepAlive(FromFloat32(f))
+		runtime.KeepAlive(FromFloat32(r.Float32()))
 	}
 }
 
 func BenchmarkFloat32(b *testing.B) {
-	f := Float16(0x3555)
+	r := newXorshift32()
 	for i := 0; i < b.N; i++ {
+		f, _ := r.Float16Pair()
 		runtime.KeepAlive(f.Float32())
 	}
 }
 
 func BenchmarkFromFloat64(b *testing.B) {
-	f := float64(1) / 3
+	r := newXorshift32()
 	for i := 0; i < b.N; i++ {
-		runtime.KeepAlive(FromFloat64(f))
+		runtime.KeepAlive(FromFloat64(r.Float64()))
 	}
 }
 

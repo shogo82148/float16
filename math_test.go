@@ -41,6 +41,17 @@ func (x *xorshift32) Float16Pair() (Float16, Float16) {
 	return a, b
 }
 
+func (x *xorshift32) Float32() float32 {
+	bits := x.Uint32()
+	return math.Float32frombits(bits)
+}
+
+func (x *xorshift32) Float64() float64 {
+	bits := uint64(x.Uint32()) << 32
+	bits |= uint64(x.Uint32())
+	return math.Float64frombits(bits)
+}
+
 func BenchmarkFloat16Pair(b *testing.B) {
 	x := newXorshift32()
 	for i := 0; i < b.N; i++ {
