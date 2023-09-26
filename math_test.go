@@ -26,10 +26,12 @@ func newXorshift32() *xorshift32 {
 }
 
 func (x *xorshift32) Uint32() uint32 {
-	*x ^= *x << 13
-	*x ^= *x >> 17
-	*x ^= *x << 5
-	return uint32(*x)
+	a := *x
+	a ^= a << 13
+	a ^= a >> 17
+	a ^= a << 5
+	*x = a
+	return uint32(a)
 }
 
 // Float16Pair returns a pair of random Float16 values.
@@ -39,6 +41,32 @@ func (x *xorshift32) Float16Pair() (Float16, Float16) {
 	a := Float16(u32 & 0xffff)
 	b := Float16((u32 >> 16) & 0xffff)
 	return a, b
+}
+
+func (x *xorshift32) Float32() float32 {
+	bits := x.Uint32()
+	return math.Float32frombits(bits)
+}
+
+type xorshift64 uint64 // xorshift64
+
+func newXorshift64() *xorshift64 {
+	x := xorshift64(42)
+	return &x
+}
+
+func (x *xorshift64) Uint64() uint64 {
+	a := *x
+	a ^= a << 13
+	a ^= a >> 7
+	a ^= a << 17
+	*x = a
+	return uint64(a)
+}
+
+func (x *xorshift64) Float64() float64 {
+	bits := x.Uint64()
+	return math.Float64frombits(bits)
 }
 
 func BenchmarkFloat16Pair(b *testing.B) {
