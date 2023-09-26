@@ -294,22 +294,25 @@ func TestFloat64_Specials(t *testing.T) {
 }
 
 func BenchmarkFromFloat32(b *testing.B) {
-	f := float32(1) / 3
+	r := newXorshift32()
 	for i := 0; i < b.N; i++ {
+		f := r.Float32()
 		runtime.KeepAlive(FromFloat32(f))
 	}
 }
 
 func BenchmarkFloat32(b *testing.B) {
-	f := Float16(0x3555)
+	r := newXorshift32()
 	for i := 0; i < b.N; i++ {
+		f, _ := r.Float16Pair()
 		runtime.KeepAlive(f.Float32())
 	}
 }
 
 func BenchmarkFromFloat64(b *testing.B) {
-	f := float64(1) / 3
+	r := newXorshift64()
 	for i := 0; i < b.N; i++ {
+		f := r.Float64()
 		runtime.KeepAlive(FromFloat64(f))
 	}
 }
