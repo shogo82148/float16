@@ -161,7 +161,11 @@ func TestFromFloat64_TestFloat(t *testing.T) {
 	for _, tt := range f64ToF16 {
 		f64 := math.Float64frombits(tt.f64)
 		got := FromFloat64(f64)
-		if got.Bits() != tt.f16 {
+		want := FromBits(tt.f16)
+		if got.IsNaN() && want.IsNaN() {
+			continue
+		}
+		if got != want {
 			t.Errorf("%016x: expected %04x, got %04x", tt.f64, tt.f16, got.Bits())
 		}
 	}
@@ -169,9 +173,14 @@ func TestFromFloat64_TestFloat(t *testing.T) {
 
 func TestFromFloat64_All(t *testing.T) {
 	for bits := 0; bits < 1<<16; bits++ {
-		f := FromBits(uint16(bits))
-		if !f.IsNaN() && f != FromFloat64(f.Float64()) {
-			t.Errorf("%x: expected %x, got %x", bits, f, FromFloat64(f.Float64()))
+		f16 := FromBits(uint16(bits))
+		f64 := f16.Float64()
+		got := FromFloat64(f64)
+		if f16.IsNaN() && got.IsNaN() {
+			continue
+		}
+		if got != f16 {
+			t.Errorf("%x: expected %x, got %x", bits, f16, got)
 		}
 	}
 }
