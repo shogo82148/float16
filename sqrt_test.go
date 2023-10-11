@@ -26,7 +26,7 @@ func TestSqrt(t *testing.T) {
 
 	for _, tt := range tests {
 		x := FromFloat64(tt.x)
-		y := Sqrt(x)
+		y := x.Sqrt()
 		if y.IsNaN() && math.IsNaN(tt.y) {
 			continue
 		}
@@ -40,6 +40,22 @@ func BenchmarkSqrt(b *testing.B) {
 	r := newXorshift32()
 	for i := 0; i < b.N; i++ {
 		f, _ := r.Float16Pair()
-		runtime.KeepAlive(Sqrt(f))
+		runtime.KeepAlive(f.Sqrt())
+	}
+}
+
+//go:generate sh -c "perl scripts/f16_sqrt.pl | gofmt > f16_sqrt_test.go"
+
+func TestSqrt_TestFloat(t *testing.T) {
+	for _, tt := range f16Sqrt {
+		x := FromBits(tt.x)
+		got := x.Sqrt()
+		want := FromBits(tt.y)
+		if got.IsNaN() && want.IsNaN() {
+			continue
+		}
+		if got != want {
+			t.Errorf("expected %04x, got %04x", got.Bits(), want.Bits())
+		}
 	}
 }

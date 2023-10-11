@@ -2,7 +2,15 @@ package float16
 
 import "math/bits"
 
-func Sqrt(x Float16) Float16 {
+// Sqrt returns the square root of x.
+//
+// Special cases are:
+//
+//	Sqrt(+Inf) = +Inf
+//	Sqrt(±0) = ±0
+//	Sqrt(x < 0) = NaN
+//	Sqrt(NaN) = NaN
+func (x Float16) Sqrt() Float16 {
 	// special cases
 	switch {
 	case x&^signMask16 == 0 || x.IsNaN() || x.IsInf(1):
