@@ -147,6 +147,7 @@ func TestFormat(t *testing.T) {
 		{Inf(1), 'X', -1, "+Inf"},
 		{Inf(-1), 'X', -1, "-Inf"},
 		{NaN(), 'X', -1, "NaN"},
+		{FromFloat64(0x1.ffc0p0), 'X', 3, "0X1.FFCP+00"},
 	}
 
 	for _, tt := range tests {

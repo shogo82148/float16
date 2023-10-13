@@ -140,5 +140,5 @@ func nibble(fmt byte, x uint16) byte {
 	if x < 10 {
 		return '0' + byte(x)
 	}
-	return ('a' + byte(x-10)) | (fmt & 0x20)
+	return ('A' + byte(x-10)) | (fmt & ('a' - 'A'))
 }
