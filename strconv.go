@@ -14,10 +14,50 @@ func (x Float16) Format(fmt byte, prec int) string {
 
 func (x Float16) Append(buf []byte, fmt byte, prec int) []byte {
 	switch fmt {
+	case 'f':
+		return x.appendFloat(buf, fmt, prec)
 	case 'x', 'X':
 		return x.appendHex(buf, fmt, prec)
 	}
 	return strconv.AppendFloat(buf, x.Float64(), fmt, prec, 32)
+}
+
+func (x Float16) appendFloat(buf []byte, fmt byte, prec int) []byte {
+	switch {
+	case x.IsNaN():
+		return append(buf, "NaN"...)
+	case x == uvinf:
+		return append(buf, "+Inf"...)
+	case x == uvneginf:
+		return append(buf, "-Inf"...)
+	}
+
+	f := x.fix24()
+	if x&signMask16 != 0 {
+		buf = append(buf, '-')
+		f = -f
+	}
+	i := int(f >> 24)
+	f &= 0xffffff
+
+	switch {
+	case i >= 10000:
+		buf = append(buf, byte((i/10000)%10)+'0')
+		fallthrough
+	case i >= 1000:
+		buf = append(buf, byte((i/1000)%10)+'0')
+		fallthrough
+	case i >= 100:
+		buf = append(buf, byte((i/100)%10)+'0')
+		fallthrough
+	case i >= 10:
+		buf = append(buf, byte((i/10)%10)+'0')
+		fallthrough
+	default:
+		buf = append(buf, byte(i%10)+'0')
+	}
+
+	return buf
 }
 
 func (x Float16) appendHex(buf []byte, fmt byte, prec int) []byte {

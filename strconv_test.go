@@ -90,6 +90,19 @@ func TestFormat(t *testing.T) {
 		{Inf(-1), 'f', -1, "-Inf"},
 		{NaN(), 'f', -1, "NaN"},
 
+		{FromFloat64(1), 'f', -1, "1"},
+		{FromFloat64(10), 'f', -1, "10"},
+		{FromFloat64(100), 'f', -1, "100"},
+		{FromFloat64(1000), 'f', -1, "1000"},
+		{FromFloat64(10000), 'f', -1, "10000"},
+		{FromFloat64(65504), 'f', -1, "65504"},
+		{FromFloat64(-1), 'f', -1, "-1"},
+		{FromFloat64(-10), 'f', -1, "-10"},
+		{FromFloat64(-100), 'f', -1, "-100"},
+		{FromFloat64(-1000), 'f', -1, "-1000"},
+		{FromFloat64(-10000), 'f', -1, "-10000"},
+		{FromFloat64(-65504), 'f', -1, "-65504"},
+
 		// alternate formats
 		{0, 'g', -1, "0"},
 		{0x8000, 'g', -1, "-0"},
