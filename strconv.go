@@ -1,7 +1,11 @@
 package float16
 
 import (
+	"log"
+	"math/bits"
 	"strconv"
+
+	"github.com/shogo82148/int128"
 )
 
 func (x Float16) String() string {
@@ -27,6 +31,8 @@ func (x Float16) Append(buf []byte, fmt byte, prec int) []byte {
 		return x.appendBin(buf)
 	case 'x', 'X':
 		return x.appendHex(buf, fmt, prec)
+	case 'f':
+		return x.appendDec(buf, fmt, prec)
 	}
 
 	// TODO: shortest representation
@@ -48,9 +54,6 @@ func (x Float16) appendBin(buf []byte) []byte {
 	exp -= shift16
 
 	switch {
-	case frac >= 10000:
-		buf = append(buf, byte((frac/10000)%10)+'0')
-		fallthrough
 	case frac >= 1000:
 		buf = append(buf, byte((frac/1000)%10)+'0')
 		fallthrough
@@ -79,6 +82,104 @@ func (x Float16) appendBin(buf []byte) []byte {
 	default:
 		buf = append(buf, byte(exp%10)+'0')
 	}
+	return buf
+}
+
+func (x Float16) appendDec(buf []byte, fmt byte, prec int) []byte {
+	if prec >= 0 {
+		const five24 = 59604644775390625 // = 5^24
+		ten := int128.Uint128{L: 10}
+
+		var dec24 int128.Uint128
+		fix := x.fix24()
+		dec24.H, dec24.L = bits.Mul64(uint64(fix), five24)
+
+		// round to nearest even
+		if prec < 24 {
+			n := int128.Uint128{L: 1}
+			for i := 0; i < 24-prec; i++ {
+				n = n.Mul(ten)
+			}
+			n2 := n.Rsh(1)
+			div, mod := dec24.DivMod(n)
+			if mod.Cmp(n2) > 0 {
+				// round up
+				dec24 = div.Add(n)
+			} else if mod.Cmp(n2) == 0 {
+				// round to even
+				if div.L&1 != 0 {
+					dec24 = div.Add(n)
+				}
+			}
+		}
+
+		// convert to decimal
+		var data [24]byte
+		for i := 0; i < 24; i++ {
+			var mod int128.Uint128
+			dec24, mod = dec24.DivMod(ten)
+			data[i] = byte(mod.L)
+		}
+
+		// convert integer part
+		switch {
+		case dec24.L >= 10000:
+			buf = append(buf, byte((dec24.L/10000)%10)+'0')
+			fallthrough
+		case dec24.L >= 1000:
+			buf = append(buf, byte((dec24.L/1000)%10)+'0')
+			fallthrough
+		case dec24.L >= 100:
+			buf = append(buf, byte((dec24.L/100)%10)+'0')
+			fallthrough
+		case dec24.L >= 10:
+			buf = append(buf, byte((dec24.L/10)%10)+'0')
+			fallthrough
+		default:
+			buf = append(buf, byte(dec24.L%10)+'0')
+		}
+		if prec == 0 {
+			return buf
+		}
+
+		buf = append(buf, '.')
+
+		// convert fractional part
+		var i int
+		for i = 0; i < prec && i < len(data); i++ {
+			buf = append(buf, data[23-i]+'0')
+		}
+		for ; i < prec; i++ {
+			buf = append(buf, '0')
+		}
+
+		return buf
+	}
+
+	var exact, lower, upper int128.Uint128
+	exp := int(x >> shift16 & mask16)
+	frac := uint64(x & fracMask16)
+	if exp == 0 {
+		// subnormal number
+		exact.L = frac * 2
+		lower.L = exact.L - 1
+		upper.L = exact.L + 1
+	} else {
+		// normal number
+		exact.L = (frac | (1 << shift16)) << exp
+		lower.L = exact.L - (1 << (exp - 1))
+		upper.L = exact.L + (1 << (exp - 1))
+	}
+
+	const five25 = 298023223876953125 // = 5^25
+	exact.H, exact.L = bits.Mul64(exact.L, five25)
+	lower.H, lower.L = bits.Mul64(lower.L, five25)
+	upper.H, upper.L = bits.Mul64(upper.L, five25)
+
+	log.Print(exact.String())
+	log.Print(lower.String())
+	log.Print(upper.String())
+
 	return buf
 }
 
