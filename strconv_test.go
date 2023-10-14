@@ -63,12 +63,16 @@ func TestFormat(t *testing.T) {
 		s    string
 	}{
 		// binary exponent formats
-
-		// {0, 'b', -1, "0"},
-		// {0x8000, 'b', -1, "-0"},
+		{0, 'b', -1, "0p-24"},
+		{0x8000, 'b', -1, "-0p-24"},
 		{Inf(1), 'b', -1, "+Inf"},
 		{Inf(-1), 'b', -1, "-Inf"},
 		{NaN(), 'b', -1, "NaN"},
+
+		{0x0001, 'b', -1, "1p-24"},
+		{FromFloat64(1), 'b', -1, "1024p-10"},
+		{FromFloat64(1.5), 'b', -1, "1536p-10"},
+		{FromFloat64(65504), 'b', -1, "2047p+5"},
 
 		// decimal exponent formats
 		{0, 'e', -1, "0e+00"},

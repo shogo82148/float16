@@ -13,16 +13,6 @@ func (x Float16) Format(fmt byte, prec int) string {
 }
 
 func (x Float16) Append(buf []byte, fmt byte, prec int) []byte {
-	switch fmt {
-	case 'f':
-		return x.appendFloat(buf, fmt, prec)
-	case 'x', 'X':
-		return x.appendHex(buf, fmt, prec)
-	}
-	return strconv.AppendFloat(buf, x.Float64(), fmt, prec, 32)
-}
-
-func (x Float16) appendFloat(buf []byte, fmt byte, prec int) []byte {
 	switch {
 	case x.IsNaN():
 		return append(buf, "NaN"...)
@@ -32,6 +22,67 @@ func (x Float16) appendFloat(buf []byte, fmt byte, prec int) []byte {
 		return append(buf, "-Inf"...)
 	}
 
+	switch fmt {
+	case 'b':
+		return x.appendBin(buf)
+	case 'f':
+		return x.appendFloat(buf, fmt, prec)
+	case 'x', 'X':
+		return x.appendHex(buf, fmt, prec)
+	}
+	return strconv.AppendFloat(buf, x.Float64(), fmt, prec, 32)
+}
+
+func (x Float16) appendBin(buf []byte) []byte {
+	if x&signMask16 != 0 {
+		buf = append(buf, '-')
+	}
+	exp := int(x>>shift16&mask16) - bias16
+	frac := x & fracMask16
+
+	if exp == -bias16 {
+		exp++
+	} else {
+		frac |= 1 << shift16
+	}
+	exp -= shift16
+
+	switch {
+	case frac >= 10000:
+		buf = append(buf, byte((frac/10000)%10)+'0')
+		fallthrough
+	case frac >= 1000:
+		buf = append(buf, byte((frac/1000)%10)+'0')
+		fallthrough
+	case frac >= 100:
+		buf = append(buf, byte((frac/100)%10)+'0')
+		fallthrough
+	case frac >= 10:
+		buf = append(buf, byte((frac/10)%10)+'0')
+		fallthrough
+	default:
+		buf = append(buf, byte(frac%10)+'0')
+	}
+
+	buf = append(buf, 'p')
+	if exp >= 0 {
+		buf = append(buf, '+')
+	} else {
+		buf = append(buf, '-')
+		exp = -exp
+	}
+
+	switch {
+	case exp >= 10:
+		buf = append(buf, byte(exp/10)+'0')
+		fallthrough
+	default:
+		buf = append(buf, byte(exp%10)+'0')
+	}
+	return buf
+}
+
+func (x Float16) appendFloat(buf []byte, fmt byte, prec int) []byte {
 	f := x.fix24()
 	if x&signMask16 != 0 {
 		buf = append(buf, '-')
@@ -61,15 +112,6 @@ func (x Float16) appendFloat(buf []byte, fmt byte, prec int) []byte {
 }
 
 func (x Float16) appendHex(buf []byte, fmt byte, prec int) []byte {
-	switch {
-	case x.IsNaN():
-		return append(buf, "NaN"...)
-	case x == uvinf:
-		return append(buf, "+Inf"...)
-	case x == uvneginf:
-		return append(buf, "-Inf"...)
-	}
-
 	// normalize x
 	sign, exp, frac := x.split()
 	if sign != 0 {
