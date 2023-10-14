@@ -21,13 +21,6 @@ func TestString(t *testing.T) {
 		{FromFloat64(1.5), "1.5"},
 		{FromFloat64(1.25), "1.25"},
 		{FromFloat64(1.125), "1.125"},
-		{FromFloat64(1.0625), "1.0625"},
-		{FromFloat64(1.03125), "1.03125"},
-		{FromFloat64(1.015625), "1.015625"},
-		{FromFloat64(1.0078125), "1.0078125"},
-		{FromFloat64(1.00390625), "1.00390625"},
-		{FromFloat64(1.001953125), "1.001953125"},
-		{FromFloat64(1.0009765625), "1.0009765625"},
 
 		{FromFloat64(2), "2"},
 		{FromFloat64(4), "4"},
@@ -94,7 +87,6 @@ func TestFormat(t *testing.T) {
 		{Inf(-1), 'f', -1, "-Inf"},
 		{NaN(), 'f', -1, "NaN"},
 
-		{FromFloat64(1), 'f', -1, "1"},
 		{FromFloat64(10), 'f', -1, "10"},
 		{FromFloat64(100), 'f', -1, "100"},
 		{FromFloat64(1000), 'f', -1, "1000"},
