@@ -216,6 +216,24 @@ func (f Float16) IsNaN() bool {
 	return f&(mask16<<shift16) == (mask16<<shift16) && f&fracMask16 != 0
 }
 
+func (f Float16) split() (sign uint16, exp int32, frac uint16) {
+	sign = uint16(f & signMask16)
+	exp = int32((f>>shift16)&mask16) - bias16
+	frac = uint16(f & fracMask16)
+
+	// normalize f
+	if exp == -bias16 {
+		// subnormal number
+		l := bits.Len16(frac)
+		frac <<= shift16 - l + 1
+		exp = -(bias16 + shift16) + int32(l)
+	} else {
+		// normal number
+		frac |= 1 << shift16
+	}
+	return
+}
+
 func (f Float16) isSignalingNaN() bool {
 	exp := (f >> shift16) & mask16
 	frac := f & fracMask16

@@ -27,10 +27,7 @@ func TestSqrt(t *testing.T) {
 	for _, tt := range tests {
 		x := FromFloat64(tt.x)
 		y := x.Sqrt()
-		if y.IsNaN() && math.IsNaN(tt.y) {
-			continue
-		}
-		if y.Float64() != tt.y {
+		if y != FromFloat64(tt.y) {
 			t.Errorf("expected %x, got %x", tt.y, y.Float64())
 		}
 	}
