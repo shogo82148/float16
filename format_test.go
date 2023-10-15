@@ -21,16 +21,20 @@ func TestFormat(t *testing.T) {
 		{"% f", FromFloat64(-0.5), "-0.5"},
 		{"%8f", FromFloat64(0.5), "     0.5"},
 		{"%-8f", FromFloat64(0.5), "0.5     "},
+		{"%.2f", FromFloat64(0.5), "0.50"},
 
 		{"%.6e", FromFloat64(0.5), "5.000000e-01"},
 
 		{"%g", FromFloat64(0.5), "0.5"},
+		{"%.1g", FromFloat64(0.25), "0.2"},
 
 		{"%x", FromFloat64(0.5), "0x1p-01"},
 		{"%#x", FromFloat64(0.5), "0x1p-01"},
+		{"%.1x", FromFloat64(0.5), "0x1.0p-01"},
 
 		{"%X", FromFloat64(0.5), "0X1P-01"},
 		{"%#X", FromFloat64(0.5), "0X1P-01"},
+		{"%.1X", FromFloat64(0.5), "0X1.0P-01"},
 
 		{"%v", FromFloat64(0.5), "0.5"},
 	}
