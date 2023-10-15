@@ -55,7 +55,7 @@ func TestText(t *testing.T) {
 		prec int
 		s    string
 	}{
-		// binary exponent formats
+		/****** binary exponent formats ******/
 		{0, 'b', -1, "0p-24"},
 		{0x8000, 'b', -1, "-0p-24"},
 		{Inf(1), 'b', -1, "+Inf"},
@@ -67,7 +67,7 @@ func TestText(t *testing.T) {
 		{FromFloat64(1.5), 'b', -1, "1536p-10"},
 		{FromFloat64(65504), 'b', -1, "2047p+5"},
 
-		// decimal exponent formats
+		/****** decimal exponent formats ******/
 		{0, 'e', -1, "0e+00"},
 		{0x8000, 'e', -1, "-0e+00"},
 		{Inf(1), 'e', -1, "+Inf"},
@@ -96,6 +96,22 @@ func TestText(t *testing.T) {
 		{FromFloat64(0x8p-24), 'e', -1, "5e-07"},
 		{FromFloat64(0x9p-24), 'e', -1, "5.4e-07"},
 		{FromFloat64(0xap-24), 'e', -1, "6e-07"},
+		{FromFloat64(10), 'e', -1, "1e+01"},
+		{FromFloat64(100), 'e', -1, "1e+02"},
+		{FromFloat64(1000), 'e', -1, "1e+03"},
+		{FromFloat64(10000), 'e', -1, "1e+04"},
+		{FromFloat64(65504), 'e', -1, "6.55e+04"},
+
+		// random numbers
+		{0x816f, 'e', -1, "-2.19e-05"},
+		{0xadaa, 'e', -1, "-8.85e-02"},
+		{0x92dc, 'e', -1, "-8.373e-04"},
+		{0xf4ca, 'e', -1, "-1.962e+04"},
+		{0x7aa7, 'e', -1, "5.45e+04"},
+		{0x3734, 'e', -1, "4.502e-01"},
+		{0x2ac3, 'e', -1, "5.283e-02"},
+		{0xe6d6, 'e', -1, "-1.75e+03"},
+		{0x700f, 'e', -1, "8.31e+03"},
 
 		{0, 'E', -1, "0E+00"},
 		{0x8000, 'E', -1, "-0E+00"},
@@ -103,7 +119,7 @@ func TestText(t *testing.T) {
 		{Inf(-1), 'E', -1, "-Inf"},
 		{NaN(), 'E', -1, "NaN"},
 
-		// decimal formats
+		/****** decimal formats ******/
 		{0, 'f', -1, "0"},
 		{0x8000, 'f', -1, "-0"},
 		{Inf(1), 'f', -1, "+Inf"},
@@ -155,7 +171,18 @@ func TestText(t *testing.T) {
 		{FromFloat64(-10000), 'f', -1, "-10000"},
 		{FromFloat64(-65504), 'f', -1, "-65504"},
 
-		// alternate formats
+		// random numbers
+		{0x816f, 'f', -1, "-0.0000219"},
+		{0xadaa, 'f', -1, "-0.0885"},
+		{0x92dc, 'f', -1, "-0.0008373"},
+		{0xf4ca, 'f', -1, "-19616"},
+		{0x7aa7, 'f', -1, "54496"},
+		{0x3734, 'f', -1, "0.4502"},
+		{0x2ac3, 'f', -1, "0.05283"},
+		{0xe6d6, 'f', -1, "-1750"},
+		{0x700f, 'f', -1, "8312"},
+
+		/******* alternate formats *******/
 		{0, 'g', -1, "0"},
 		{0x8000, 'g', -1, "-0"},
 		{Inf(1), 'g', -1, "+Inf"},
