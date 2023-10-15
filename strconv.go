@@ -5,10 +5,10 @@ import (
 )
 
 func (x Float16) String() string {
-	return x.Format('g', -1)
+	return x.Text('g', -1)
 }
 
-func (x Float16) Format(fmt byte, prec int) string {
+func (x Float16) Text(fmt byte, prec int) string {
 	return string(x.Append(make([]byte, 0, 8), fmt, prec))
 }
 
