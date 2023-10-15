@@ -48,7 +48,7 @@ func TestString(t *testing.T) {
 	}
 }
 
-func TestFormat(t *testing.T) {
+func TestText(t *testing.T) {
 	tests := []struct {
 		x    Float16
 		fmt  byte
@@ -160,7 +160,7 @@ func TestFormat(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		got := tt.x.Format(tt.fmt, tt.prec)
+		got := tt.x.Text(tt.fmt, tt.prec)
 		if got != tt.s {
 			t.Errorf("%#v: expected %s, got %s", tt, tt.s, got)
 		}
@@ -190,7 +190,7 @@ func FuzzFormat(f *testing.F) {
 		}
 
 		f := FromBits(x)
-		got := f.Format(byte(fmt), prec)
+		got := f.Text(byte(fmt), prec)
 		want := strconv.FormatFloat(f.Float64(), byte(fmt), prec, 64)
 		if got != want {
 			t.Errorf("expected %s, got %s", want, got)
