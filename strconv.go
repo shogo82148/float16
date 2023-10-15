@@ -166,6 +166,9 @@ func (x Float16) appendDec(buf []byte, fmt byte, prec int) []byte {
 	frac := uint64(x & fracMask16)
 	if exp == 0 {
 		// subnormal number
+		if frac == 0 {
+			return append(buf, '0')
+		}
 		exact.L = frac * 2
 		lower.L = exact.L - 1
 		upper.L = exact.L + 1
