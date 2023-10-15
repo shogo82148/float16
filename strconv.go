@@ -32,6 +32,8 @@ func (x Float16) Append(buf []byte, fmt byte, prec int) []byte {
 		return x.appendHex(buf, fmt, prec)
 	case 'f':
 		return x.appendDec(buf, fmt, prec)
+	case 'e', 'E':
+		return x.appendSci(buf, fmt, prec)
 	}
 
 	// TODO: shortest representation
@@ -97,9 +99,9 @@ func (x Float16) appendDec(buf []byte, fmt byte, prec int) []byte {
 
 		var dec24 int128.Uint128
 		fix := x.fix24()
-		dec24.H, dec24.L = bits.Mul64(uint64(fix), five24)
 
 		// round to nearest even
+		dec24.H, dec24.L = bits.Mul64(uint64(fix), five24)
 		if prec < 24 {
 			n := int128.Uint128{L: 1}
 			for i := 0; i < 24-prec; i++ {
@@ -229,6 +231,175 @@ func (x Float16) appendDec(buf []byte, fmt byte, prec int) []byte {
 		buf = append(buf, data[i]+'0')
 	}
 
+	return buf
+}
+
+func (x Float16) appendSci(buf []byte, fmt byte, prec int) []byte {
+	ten := int128.Uint128{L: 10}
+
+	// sign
+	if x&signMask16 != 0 {
+		buf = append(buf, '-')
+		x &^= signMask16
+	}
+
+	if prec >= 0 {
+		const five24 = 59604644775390625 // = 5^24
+
+		var dec24 int128.Uint128
+		fix := x.fix24()
+		dec24.H, dec24.L = bits.Mul64(uint64(fix), five24)
+
+		if fix == 0 {
+			buf = append(buf, '0')
+			if prec > 0 {
+				buf = append(buf, '.')
+				for i := 0; i < prec; i++ {
+					buf = append(buf, '0')
+				}
+			}
+			buf = append(buf, fmt, '+', '0', '0')
+			return buf
+		}
+
+		// find the first non-zero digit
+		tmp := dec24
+		var n int
+		for ; tmp.H != 0 || tmp.L != 0; n++ {
+			tmp = tmp.Div(ten)
+		}
+		n--
+
+		// round to nearest even
+		if prec < n {
+			m := int128.Uint128{L: 1}
+			for i := 0; i < n-prec; i++ {
+				m = m.Mul(ten)
+			}
+			m2 := m.Rsh(1)
+			div, mod := dec24.DivMod(m)
+			dec24 = dec24.Sub(mod)
+			if mod.Cmp(m2) > 0 {
+				// round up
+				dec24 = dec24.Add(m)
+			} else if mod.Cmp(m2) == 0 {
+				// round to even
+				if div.L&1 != 0 {
+					dec24 = dec24.Add(m)
+				}
+			}
+		}
+
+		// convert to decimal
+		var data [30]byte
+		for i := 0; i < 30; i++ {
+			var mod int128.Uint128
+			dec24, mod = dec24.DivMod(ten)
+			data[i] = byte(mod.L)
+		}
+
+		// find the first non-zero digit
+		i := len(data) - 1
+		for ; i >= 0; i-- {
+			if data[i] != 0 {
+				break
+			}
+		}
+		buf = append(buf, data[i]+'0')
+		i--
+
+		if prec != 0 {
+			buf = append(buf, '.')
+			var j int
+			for ; i >= 0 && j < prec; i, j = i-1, j+1 {
+				buf = append(buf, data[i]+'0')
+			}
+			for ; j < prec; j++ {
+				buf = append(buf, '0')
+			}
+		}
+
+		buf = append(buf, fmt)
+		n -= 24
+		if n >= 0 {
+			buf = append(buf, '+')
+		} else {
+			buf = append(buf, '-')
+			n = -n
+		}
+		buf = append(buf, byte((n/10)%10)+'0', byte(n%10)+'0')
+		return buf
+	}
+
+	var exact, lower, upper int128.Uint128
+	exp := int(x >> shift16 & mask16)
+	frac := uint64(x & fracMask16)
+	if exp == 0 {
+		// subnormal number
+		if frac == 0 {
+			return append(buf, '0', fmt, '+', '0', '0')
+		}
+		exact.L = frac * 2
+		lower.L = exact.L - 1
+		upper.L = exact.L + 1
+	} else {
+		// normal number
+		exact.L = (frac | (1 << shift16)) << exp
+		lower.L = exact.L - (1 << (exp - 1))
+		upper.L = exact.L + (1 << (exp - 1))
+	}
+
+	const five25 = 298023223876953125 // = 5^25
+	exact.H, exact.L = bits.Mul64(exact.L, five25)
+	lower.H, lower.L = bits.Mul64(lower.L, five25)
+	upper.H, upper.L = bits.Mul64(upper.L, five25)
+
+	var n int = 30
+	var dec25 int128.Uint128
+	for ; n > 0; n-- {
+		dec25 = roundUint128(exact, n)
+		if dec25.Cmp(lower) >= 0 && dec25.Cmp(upper) <= 0 {
+			break
+		}
+	}
+
+	// convert to decimal
+	var data [30]byte
+	for i := 0; i < 30; i++ {
+		var mod int128.Uint128
+		dec25, mod = dec25.DivMod(ten)
+		data[i] = byte(mod.L)
+	}
+
+	// find the first non-zero digit
+	i := len(data) - 1
+	for ; i >= 0; i-- {
+		if data[i] != 0 {
+			break
+		}
+	}
+	buf = append(buf, data[i]+'0')
+	i--
+	m := i
+
+	// convert fractional part
+	if i+1 != n {
+		buf = append(buf, '.')
+		for ; i >= n; i-- {
+			buf = append(buf, data[i]+'0')
+		}
+	}
+
+	// exponent
+	buf = append(buf, fmt)
+	m -= 24
+	if m >= 0 {
+		buf = append(buf, '+')
+	} else {
+		buf = append(buf, '-')
+		m = -m
+	}
+	buf = append(buf, byte((m/10)%10)+'0', byte(m%10)+'0')
 	return buf
 }
 
