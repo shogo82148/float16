@@ -1,7 +1,6 @@
 package float16
 
 import (
-	"log"
 	"math/bits"
 	"strconv"
 
@@ -86,9 +85,15 @@ func (x Float16) appendBin(buf []byte) []byte {
 }
 
 func (x Float16) appendDec(buf []byte, fmt byte, prec int) []byte {
+	ten := int128.Uint128{L: 10}
+
+	// sign
+	if x&signMask16 != 0 {
+		buf = append(buf, '-')
+	}
+
 	if prec >= 0 {
 		const five24 = 59604644775390625 // = 5^24
-		ten := int128.Uint128{L: 10}
 
 		var dec24 int128.Uint128
 		fix := x.fix24()
@@ -102,13 +107,14 @@ func (x Float16) appendDec(buf []byte, fmt byte, prec int) []byte {
 			}
 			n2 := n.Rsh(1)
 			div, mod := dec24.DivMod(n)
+			dec24 = dec24.Sub(mod)
 			if mod.Cmp(n2) > 0 {
 				// round up
-				dec24 = div.Add(n)
+				dec24 = dec24.Add(n)
 			} else if mod.Cmp(n2) == 0 {
 				// round to even
 				if div.L&1 != 0 {
-					dec24 = div.Add(n)
+					dec24 = dec24.Add(n)
 				}
 			}
 		}
@@ -142,9 +148,8 @@ func (x Float16) appendDec(buf []byte, fmt byte, prec int) []byte {
 			return buf
 		}
 
-		buf = append(buf, '.')
-
 		// convert fractional part
+		buf = append(buf, '.')
 		var i int
 		for i = 0; i < prec && i < len(data); i++ {
 			buf = append(buf, data[23-i]+'0')
@@ -176,11 +181,80 @@ func (x Float16) appendDec(buf []byte, fmt byte, prec int) []byte {
 	lower.H, lower.L = bits.Mul64(lower.L, five25)
 	upper.H, upper.L = bits.Mul64(upper.L, five25)
 
-	log.Print(exact.String())
-	log.Print(lower.String())
-	log.Print(upper.String())
+	var n int = 25
+	var dec25 int128.Uint128
+	for ; n > 0; n-- {
+		dec25 = roundUint128(exact, n)
+		if dec25.Cmp(lower) >= 0 && dec25.Cmp(upper) <= 0 {
+			break
+		}
+	}
+
+	// convert to decimal
+	var data [25]byte
+	for i := 0; i < 25; i++ {
+		var mod int128.Uint128
+		dec25, mod = dec25.DivMod(ten)
+		data[i] = byte(mod.L)
+	}
+
+	// convert integer part
+	switch {
+	case dec25.L >= 10000:
+		buf = append(buf, byte((dec25.L/10000)%10)+'0')
+		fallthrough
+	case dec25.L >= 1000:
+		buf = append(buf, byte((dec25.L/1000)%10)+'0')
+		fallthrough
+	case dec25.L >= 100:
+		buf = append(buf, byte((dec25.L/100)%10)+'0')
+		fallthrough
+	case dec25.L >= 10:
+		buf = append(buf, byte((dec25.L/10)%10)+'0')
+		fallthrough
+	default:
+		buf = append(buf, byte(dec25.L%10)+'0')
+	}
+	if n == 25 {
+		return buf
+	}
+
+	// convert fractional part
+	buf = append(buf, '.')
+	var i int
+	for i = 24; i >= n; i-- {
+		buf = append(buf, data[i]+'0')
+	}
 
 	return buf
+}
+
+func roundUint128(x int128.Uint128, n int) int128.Uint128 {
+	ten := int128.Uint128{L: 10}
+	y := int128.Uint128{L: 1}
+	for i := 0; i < n; i++ {
+		y = y.Mul(ten)
+	}
+	y2 := y.Rsh(1)
+
+	// round to nearest even
+	div, mod := x.DivMod(y)
+	x = x.Sub(mod)
+	cmp := mod.Cmp(y2)
+	if cmp > 0 {
+		// round up
+		return x.Add(y)
+	}
+	if cmp < 0 {
+		// round down
+		return x
+	}
+
+	// round to even
+	if div.L&1 != 0 {
+		return x.Add(y)
+	}
+	return x
 }
 
 func (x Float16) appendHex(buf []byte, fmt byte, prec int) []byte {
