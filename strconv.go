@@ -7,6 +7,14 @@ import (
 	"github.com/shogo82148/int128"
 )
 
+func Parse(s string) (Float16, error) {
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0, err
+	}
+	return FromFloat64(f), nil
+}
+
 func (x Float16) String() string {
 	return x.Text('g', -1)
 }
