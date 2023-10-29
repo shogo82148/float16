@@ -230,6 +230,12 @@ func (d *decimal) floatBits() (b uint16, overflow bool) {
 	d.Shift(1 + shift16)
 	mant = d.RoundedInteger()
 
+	// Rounding might have added a bit; shift down.
+	if mant == 2<<shift16 {
+		mant >>= 1
+		exp++
+	}
+
 	// Denormalized?
 	if mant&(1<<shift16) == 0 {
 		exp = -bias16

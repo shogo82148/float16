@@ -44,6 +44,8 @@ func TestParse(t *testing.T) {
 		{"0.5", exact(0.5)},
 		{"0.25", exact(0.25)},
 		{"0.125", exact(0.125)},
+		{"0.00024414062", exact(0x1p-12)},
+		{"0.00012207031", exact(0x1p-13)},
 		{"0.00006103515625", exact(0x1p-14)},
 
 		// subnormal numbers
