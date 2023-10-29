@@ -26,8 +26,26 @@ func TestParse(t *testing.T) {
 		{"-0", 0x8000},
 		{"+Inf", Inf(1)},
 		{"-Inf", Inf(-1)},
+		{"+infinity", Inf(1)},
+		{"-infinity", Inf(-1)},
 		{"NaN", NaN()},
 
+		// greater than one
+		{"1", exact(1)},
+		{"2", exact(2)},
+		{"4", exact(4)},
+		{"8", exact(8)},
+		{"16", exact(16)},
+		{"32", exact(32)},
+		{"64", exact(64)},
+		{"128", exact(128)},
+
+		// less than one
+		{"0.5", exact(0.5)},
+		{"0.25", exact(0.25)},
+		{"0.125", exact(0.125)},
+
+		// test rounding
 		{"1.0009765625", exact(1.0009765625)}, // minimum value greater than one
 		{"1.00048828125", exact(1)},
 		{"1.0004882812500001", exact(1.0009765625)},
