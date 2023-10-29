@@ -39,6 +39,7 @@ func TestParse(t *testing.T) {
 		{"32", exact(32)},
 		{"64", exact(64)},
 		{"128", exact(128)},
+		{"65504", exact(65504)},
 
 		// less than one
 		{"0.5", exact(0.5)},
@@ -58,6 +59,9 @@ func TestParse(t *testing.T) {
 		{"1.0004882812500001", exact(1.0009765625)},
 		{"1.0014648437499999", exact(1.0009765625)},
 		{"1.00146484375", exact(1.001953125)},
+
+		// overflow
+		{"65520", Inf(1)},
 	}
 
 	for _, tt := range tests {

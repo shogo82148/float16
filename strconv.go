@@ -225,6 +225,9 @@ func (d *decimal) floatBits() (b uint16, overflow bool) {
 		d.Shift(-n)
 		exp += n
 	}
+	if exp+bias16 >= mask16 {
+		goto overflow
+	}
 
 	// Extract 1+shift16 bits
 	d.Shift(1 + shift16)
@@ -234,6 +237,9 @@ func (d *decimal) floatBits() (b uint16, overflow bool) {
 	if mant == 2<<shift16 {
 		mant >>= 1
 		exp++
+		if exp+bias16 >= mask16 {
+			goto overflow
+		}
 	}
 
 	// Denormalized?
