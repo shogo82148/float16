@@ -44,6 +44,11 @@ func TestParse(t *testing.T) {
 		{"0.5", exact(0.5)},
 		{"0.25", exact(0.25)},
 		{"0.125", exact(0.125)},
+		{"0.00006103515625", exact(0x1p-14)},
+
+		// subnormal numbers
+		{"0.000030517578125", exact(0x1p-15)},
+		{"0.000000059604644775390625", exact(0x1p-24)},
 
 		// test rounding
 		{"1.0009765625", exact(1.0009765625)}, // minimum value greater than one

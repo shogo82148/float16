@@ -218,10 +218,22 @@ func (d *decimal) floatBits() (b uint16, overflow bool) {
 	// Our rage is [0.5,1) but floating point range is [1,2).
 	exp--
 
+	// Minimum exponent is -bias16.
+	// If the exponent is smaller, denormalize.
+	if exp <= -bias16 {
+		n := -bias16 - exp + 1
+		d.Shift(-n)
+		exp += n
+	}
+
 	// Extract 1+shift16 bits
 	d.Shift(1 + shift16)
 	mant = d.RoundedInteger()
 
+	// Denormalized?
+	if mant&(1<<shift16) == 0 {
+		exp = -bias16
+	}
 	goto out
 
 overflow:
