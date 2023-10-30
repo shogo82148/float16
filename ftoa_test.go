@@ -264,32 +264,21 @@ func TestText(t *testing.T) {
 	}
 }
 
-func FuzzParse(f *testing.F) {
-	f.Add("0")
-	f.Add("-0")
-	f.Add("+Inf")
-	f.Add("-Inf")
-	f.Add("NaN")
-	f.Add("1")
-	f.Add("1.0009765625")
-	f.Add("1.00048828125")
-
-	f.Fuzz(func(t *testing.T, s string) {
-		x0, err := Parse(s)
-		if err != nil {
-			return
+func TestText_RoundTrip(t *testing.T) {
+	for i := 0; i < 0x10000; i++ {
+		for _, fmt := range []byte{'e', 'f', 'x'} {
+			f := FromBits(uint16(i))
+			str := f.Text(fmt, -1)
+			got, err := Parse(str)
+			if err != nil {
+				t.Errorf("Format(%x, %c) = %q: expected no error, got %v", i, fmt, str, err)
+			}
+			if got.IsNaN() && f.IsNaN() {
+				continue
+			}
+			if got != f {
+				t.Errorf("Format(%x, %c) = %q: expected %v, got %v", i, fmt, str, f, got)
+			}
 		}
-		s1 := x0.String()
-
-		x1, err := Parse(s1)
-		if err != nil {
-			t.Errorf("expected no error, got %v", err)
-		}
-		if x0.IsNaN() && x1.IsNaN() {
-			return
-		}
-		if x0 != x1 {
-			t.Errorf("expected %v, got %v", x0, x1)
-		}
-	})
+	}
 }
