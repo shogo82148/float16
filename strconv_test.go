@@ -1,9 +1,123 @@
 package float16
 
 import (
+	"cmp"
+	"fmt"
 	"strconv"
 	"testing"
 )
+
+// exact returns the exact float16 representation of f.
+// it panics if f doesn't have an exact float16 representation.
+func exact(f float64) Float16 {
+	ret := FromFloat64(f)
+	if cmp.Compare(ret.Float64(), f) != 0 {
+		panic(fmt.Sprintf("%f doesn't have exact float16 representation", f))
+	}
+	return ret
+}
+
+func TestParse(t *testing.T) {
+	tests := []struct {
+		s string
+		x Float16
+	}{
+		{"0", 0},
+		{"-0", 0x8000},
+		{"+Inf", Inf(1)},
+		{"-Inf", Inf(-1)},
+		{"+infinity", Inf(1)},
+		{"-infinity", Inf(-1)},
+		{"NaN", NaN()},
+
+		// greater than one
+		{"1", exact(1)},
+		{"2", exact(2)},
+		{"4", exact(4)},
+		{"8", exact(8)},
+		{"16", exact(16)},
+		{"32", exact(32)},
+		{"64", exact(64)},
+		{"128", exact(128)},
+		{"65504", exact(65504)}, // maximum finite value
+
+		// 65519 is greater than the maximum finite value 65504 but it's ok.
+		// because it round down to 65504.
+		{"65519", exact(65504)},
+
+		// less than one
+		{"0.5", exact(0.5)},
+		{"0.25", exact(0.25)},
+		{"0.125", exact(0.125)},
+		{"0.00024414062", exact(0x1p-12)},
+		{"0.00012207031", exact(0x1p-13)},
+		{"0.00006103515625", exact(0x1p-14)},
+
+		// subnormal numbers
+		{"0.000030517578125", exact(0x1p-15)},
+		{"0.000000059604644775390625", exact(0x1p-24)},
+
+		// test rounding
+		{"1.0009765625", exact(1.0009765625)}, // minimum value greater than one
+		{"1.00048828125", exact(1)},
+		{"1.0004882812500001", exact(1.0009765625)},
+		{"1.0014648437499999", exact(1.0009765625)},
+		{"1.00146484375", exact(1.001953125)},
+
+		// hexadecimal
+		{"0x1p0", exact(1)},
+		{"0x1.ffc0p+15", exact(65504)},
+		{"0x1.ffcfp+15", exact(65504)}, // round down
+		{"0x1p-14", exact(0x1p-14)},    // minimum nominal
+		{"0x1p-24", exact(0x1p-24)},    // minimum subnormal greater than zero
+
+		// test rounding
+		{"0x1.000p0", exact(0x1.000p0)},
+		{"0x1.001p0", exact(0x1.000p0)},
+		{"0x1.002p0", exact(0x1.000p0)},
+		{"0x1.003p0", exact(0x1.004p0)},
+		{"0x1.004p0", exact(0x1.004p0)},
+		{"0x1.005p0", exact(0x1.004p0)},
+		{"0x1.006p0", exact(0x1.008p0)},
+		{"0x1.007p0", exact(0x1.008p0)},
+		{"0x1.008p0", exact(0x1.008p0)},
+		{"0x1.009p0", exact(0x1.008p0)},
+		{"0x1.00ap0", exact(0x1.008p0)},
+		{"0x1.00bp0", exact(0x1.00cp0)},
+		{"0x1.00cp0", exact(0x1.00cp0)},
+		{"0x1.00dp0", exact(0x1.00cp0)},
+		{"0x1.00ep0", exact(0x1.010p0)},
+		{"0x1.00fp0", exact(0x1.010p0)},
+	}
+
+	for _, tt := range tests {
+		got, err := Parse(tt.s)
+		if err != nil {
+			t.Errorf("%q: expected no error, got %v", tt.s, err)
+		}
+		if got != tt.x {
+			t.Errorf("%q: expected %x, got %x", tt.s, tt.x, got)
+		}
+	}
+}
+
+func TestParse_overflow(t *testing.T) {
+	test := []string{
+		"65520",
+		"6.552e4",
+		"0x1.ffep+15",
+	}
+
+	for _, tt := range test {
+		got, err := Parse(tt)
+		if err == nil {
+			t.Errorf("%q: expected overflow error, but nil", tt)
+		}
+		if got != uvinf {
+			t.Errorf("%q: expected +Inf, got %x", tt, got)
+		}
+	}
+}
 
 func TestString(t *testing.T) {
 	tests := []struct {
@@ -17,27 +131,27 @@ func TestString(t *testing.T) {
 		{Inf(-1), "-Inf"},
 		{NaN(), "NaN"},
 
-		{FromFloat64(1), "1"},
-		{FromFloat64(1.5), "1.5"},
-		{FromFloat64(1.25), "1.25"},
-		{FromFloat64(1.125), "1.125"},
+		{exact(1), "1"},
+		{exact(1.5), "1.5"},
+		{exact(1.25), "1.25"},
+		{exact(1.125), "1.125"},
 
-		{FromFloat64(2), "2"},
-		{FromFloat64(4), "4"},
-		{FromFloat64(8), "8"},
-		{FromFloat64(16), "16"},
-		{FromFloat64(32), "32"},
-		{FromFloat64(64), "64"},
-		{FromFloat64(128), "128"},
-		{FromFloat64(256), "256"},
-		{FromFloat64(512), "512"},
-		{FromFloat64(1024), "1024"},
-		{FromFloat64(2048), "2048"},
-		{FromFloat64(4096), "4096"},
-		{FromFloat64(8192), "8192"},
-		{FromFloat64(16384), "16384"},
-		{FromFloat64(32768), "32768"},
-		{FromFloat64(65504), "65504"}, // max normal
+		{exact(2), "2"},
+		{exact(4), "4"},
+		{exact(8), "8"},
+		{exact(16), "16"},
+		{exact(32), "32"},
+		{exact(64), "64"},
+		{exact(128), "128"},
+		{exact(256), "256"},
+		{exact(512), "512"},
+		{exact(1024), "1024"},
+		{exact(2048), "2048"},
+		{exact(4096), "4096"},
+		{exact(8192), "8192"},
+		{exact(16384), "16384"},
+		{exact(32768), "32768"},
+		{exact(65504), "65504"}, // max normal
 	}
 
 	for _, tt := range tests {
@@ -63,9 +177,9 @@ func TestText(t *testing.T) {
 		{NaN(), 'b', -1, "NaN"},
 
 		{0x0001, 'b', -1, "1p-24"},
-		{FromFloat64(1), 'b', -1, "1024p-10"},
-		{FromFloat64(1.5), 'b', -1, "1536p-10"},
-		{FromFloat64(65504), 'b', -1, "2047p+5"},
+		{exact(1), 'b', -1, "1024p-10"},
+		{exact(1.5), 'b', -1, "1536p-10"},
+		{exact(65504), 'b', -1, "2047p+5"},
 
 		/****** decimal exponent formats ******/
 		{0, 'e', -1, "0e+00"},
@@ -74,33 +188,33 @@ func TestText(t *testing.T) {
 		{Inf(-1), 'e', -1, "-Inf"},
 		{NaN(), 'e', -1, "NaN"},
 
-		{FromFloat64(0), 'e', 16, "0.0000000000000000e+00"},
-		{FromFloat64(0x1p-24), 'e', 16, "5.9604644775390625e-08"},
-		{FromFloat64(0x2p-24), 'e', 16, "1.1920928955078125e-07"},
-		{FromFloat64(0x3p-24), 'e', 16, "1.7881393432617188e-07"},
-		{FromFloat64(0x4p-24), 'e', 16, "2.3841857910156250e-07"},
-		{FromFloat64(0x5p-24), 'e', 16, "2.9802322387695312e-07"},
-		{FromFloat64(0x6p-24), 'e', 16, "3.5762786865234375e-07"},
-		{FromFloat64(0x7p-24), 'e', 16, "4.1723251342773438e-07"},
-		{FromFloat64(0x8p-24), 'e', 16, "4.7683715820312500e-07"},
-		{FromFloat64(0x9p-24), 'e', 16, "5.3644180297851562e-07"},
-		{FromFloat64(0xap-24), 'e', 16, "5.9604644775390625e-07"},
+		{exact(0), 'e', 16, "0.0000000000000000e+00"},
+		{exact(0x1p-24), 'e', 16, "5.9604644775390625e-08"},
+		{exact(0x2p-24), 'e', 16, "1.1920928955078125e-07"},
+		{exact(0x3p-24), 'e', 16, "1.7881393432617188e-07"},
+		{exact(0x4p-24), 'e', 16, "2.3841857910156250e-07"},
+		{exact(0x5p-24), 'e', 16, "2.9802322387695312e-07"},
+		{exact(0x6p-24), 'e', 16, "3.5762786865234375e-07"},
+		{exact(0x7p-24), 'e', 16, "4.1723251342773438e-07"},
+		{exact(0x8p-24), 'e', 16, "4.7683715820312500e-07"},
+		{exact(0x9p-24), 'e', 16, "5.3644180297851562e-07"},
+		{exact(0xap-24), 'e', 16, "5.9604644775390625e-07"},
 
-		{FromFloat64(0x1p-24), 'e', -1, "6e-08"},
-		{FromFloat64(0x2p-24), 'e', -1, "1e-07"},
-		{FromFloat64(0x3p-24), 'e', -1, "2e-07"},
-		{FromFloat64(0x4p-24), 'e', -1, "2.4e-07"},
-		{FromFloat64(0x5p-24), 'e', -1, "3e-07"},
-		{FromFloat64(0x6p-24), 'e', -1, "3.6e-07"},
-		{FromFloat64(0x7p-24), 'e', -1, "4e-07"},
-		{FromFloat64(0x8p-24), 'e', -1, "5e-07"},
-		{FromFloat64(0x9p-24), 'e', -1, "5.4e-07"},
-		{FromFloat64(0xap-24), 'e', -1, "6e-07"},
-		{FromFloat64(10), 'e', -1, "1e+01"},
-		{FromFloat64(100), 'e', -1, "1e+02"},
-		{FromFloat64(1000), 'e', -1, "1e+03"},
-		{FromFloat64(10000), 'e', -1, "1e+04"},
-		{FromFloat64(65504), 'e', -1, "6.55e+04"},
+		{exact(0x1p-24), 'e', -1, "6e-08"},
+		{exact(0x2p-24), 'e', -1, "1e-07"},
+		{exact(0x3p-24), 'e', -1, "2e-07"},
+		{exact(0x4p-24), 'e', -1, "2.4e-07"},
+		{exact(0x5p-24), 'e', -1, "3e-07"},
+		{exact(0x6p-24), 'e', -1, "3.6e-07"},
+		{exact(0x7p-24), 'e', -1, "4e-07"},
+		{exact(0x8p-24), 'e', -1, "5e-07"},
+		{exact(0x9p-24), 'e', -1, "5.4e-07"},
+		{exact(0xap-24), 'e', -1, "6e-07"},
+		{exact(10), 'e', -1, "1e+01"},
+		{exact(100), 'e', -1, "1e+02"},
+		{exact(1000), 'e', -1, "1e+03"},
+		{exact(10000), 'e', -1, "1e+04"},
+		{exact(65504), 'e', -1, "6.55e+04"},
 
 		// random numbers
 		{0x816f, 'e', -1, "-2.19e-05"},
@@ -126,50 +240,50 @@ func TestText(t *testing.T) {
 		{Inf(-1), 'f', -1, "-Inf"},
 		{NaN(), 'f', -1, "NaN"},
 
-		{FromFloat64(0x1p-24), 'f', 24, "0.000000059604644775390625"},
-		{FromFloat64(0x2p-24), 'f', 24, "0.000000119209289550781250"},
-		{FromFloat64(0x3p-24), 'f', 24, "0.000000178813934326171875"},
-		{FromFloat64(0x4p-24), 'f', 24, "0.000000238418579101562500"},
-		{FromFloat64(0x5p-24), 'f', 24, "0.000000298023223876953125"},
-		{FromFloat64(0x6p-24), 'f', 24, "0.000000357627868652343750"},
-		{FromFloat64(0x7p-24), 'f', 24, "0.000000417232513427734375"},
-		{FromFloat64(0x8p-24), 'f', 24, "0.000000476837158203125000"},
-		{FromFloat64(0x9p-24), 'f', 24, "0.000000536441802978515625"},
-		{FromFloat64(0xap-24), 'f', 24, "0.000000596046447753906250"},
+		{exact(0x1p-24), 'f', 24, "0.000000059604644775390625"},
+		{exact(0x2p-24), 'f', 24, "0.000000119209289550781250"},
+		{exact(0x3p-24), 'f', 24, "0.000000178813934326171875"},
+		{exact(0x4p-24), 'f', 24, "0.000000238418579101562500"},
+		{exact(0x5p-24), 'f', 24, "0.000000298023223876953125"},
+		{exact(0x6p-24), 'f', 24, "0.000000357627868652343750"},
+		{exact(0x7p-24), 'f', 24, "0.000000417232513427734375"},
+		{exact(0x8p-24), 'f', 24, "0.000000476837158203125000"},
+		{exact(0x9p-24), 'f', 24, "0.000000536441802978515625"},
+		{exact(0xap-24), 'f', 24, "0.000000596046447753906250"},
 
-		{FromFloat64(0x1p-24), 'f', 23, "0.00000005960464477539062"},
-		{FromFloat64(0x2p-24), 'f', 23, "0.00000011920928955078125"},
-		{FromFloat64(0x3p-24), 'f', 23, "0.00000017881393432617188"},
-		{FromFloat64(0x4p-24), 'f', 23, "0.00000023841857910156250"},
-		{FromFloat64(0x5p-24), 'f', 23, "0.00000029802322387695312"},
-		{FromFloat64(0x6p-24), 'f', 23, "0.00000035762786865234375"},
-		{FromFloat64(0x7p-24), 'f', 23, "0.00000041723251342773438"},
-		{FromFloat64(0x8p-24), 'f', 23, "0.00000047683715820312500"},
-		{FromFloat64(0x9p-24), 'f', 23, "0.00000053644180297851562"},
-		{FromFloat64(0xap-24), 'f', 23, "0.00000059604644775390625"},
+		{exact(0x1p-24), 'f', 23, "0.00000005960464477539062"},
+		{exact(0x2p-24), 'f', 23, "0.00000011920928955078125"},
+		{exact(0x3p-24), 'f', 23, "0.00000017881393432617188"},
+		{exact(0x4p-24), 'f', 23, "0.00000023841857910156250"},
+		{exact(0x5p-24), 'f', 23, "0.00000029802322387695312"},
+		{exact(0x6p-24), 'f', 23, "0.00000035762786865234375"},
+		{exact(0x7p-24), 'f', 23, "0.00000041723251342773438"},
+		{exact(0x8p-24), 'f', 23, "0.00000047683715820312500"},
+		{exact(0x9p-24), 'f', 23, "0.00000053644180297851562"},
+		{exact(0xap-24), 'f', 23, "0.00000059604644775390625"},
 
-		{FromFloat64(0x1p-24), 'f', -1, "0.00000006"},
-		{FromFloat64(0x2p-24), 'f', -1, "0.0000001"},
-		{FromFloat64(0x3p-24), 'f', -1, "0.0000002"},
-		{FromFloat64(0x4p-24), 'f', -1, "0.00000024"},
-		{FromFloat64(0x5p-24), 'f', -1, "0.0000003"},
-		{FromFloat64(0x6p-24), 'f', -1, "0.00000036"},
-		{FromFloat64(0x7p-24), 'f', -1, "0.0000004"},
-		{FromFloat64(0x8p-24), 'f', -1, "0.0000005"},
-		{FromFloat64(0x9p-24), 'f', -1, "0.00000054"},
-		{FromFloat64(0xap-24), 'f', -1, "0.0000006"},
+		{exact(0x1p-24), 'f', -1, "0.00000006"},
+		{exact(0x2p-24), 'f', -1, "0.0000001"},
+		{exact(0x3p-24), 'f', -1, "0.0000002"},
+		{exact(0x4p-24), 'f', -1, "0.00000024"},
+		{exact(0x5p-24), 'f', -1, "0.0000003"},
+		{exact(0x6p-24), 'f', -1, "0.00000036"},
+		{exact(0x7p-24), 'f', -1, "0.0000004"},
+		{exact(0x8p-24), 'f', -1, "0.0000005"},
+		{exact(0x9p-24), 'f', -1, "0.00000054"},
+		{exact(0xap-24), 'f', -1, "0.0000006"},
 
-		{FromFloat64(10), 'f', -1, "10"},
-		{FromFloat64(100), 'f', -1, "100"},
-		{FromFloat64(1000), 'f', -1, "1000"},
-		{FromFloat64(10000), 'f', -1, "10000"},
-		{FromFloat64(65504), 'f', -1, "65504"},
-		{FromFloat64(-1), 'f', -1, "-1"},
-		{FromFloat64(-10), 'f', -1, "-10"},
-		{FromFloat64(-100), 'f', -1, "-100"},
-		{FromFloat64(-1000), 'f', -1, "-1000"},
-		{FromFloat64(-10000), 'f', -1, "-10000"},
-		{FromFloat64(-65504), 'f', -1, "-65504"},
+		{exact(10), 'f', -1, "10"},
+		{exact(100), 'f', -1, "100"},
+		{exact(1000), 'f', -1, "1000"},
+		{exact(10000), 'f', -1, "10000"},
+		{exact(65504), 'f', -1, "65504"},
+		{exact(-1), 'f', -1, "-1"},
+		{exact(-10), 'f', -1, "-10"},
+		{exact(-100), 'f', -1, "-100"},
+		{exact(-1000), 'f', -1, "-1000"},
+		{exact(-10000), 'f', -1, "-10000"},
+		{exact(-65504), 'f', -1, "-65504"},
 
 		// random numbers
 		{0x816f, 'f', -1, "-0.0000219"},
@@ -202,44 +316,44 @@ func TestText(t *testing.T) {
 		{Inf(-1), 'x', -1, "-Inf"},
 		{NaN(), 'x', -1, "NaN"},
 
-		{FromFloat64(0), 'x', 0, "0x0p+00"},
-		{FromFloat64(0x1.0p0), 'x', 0, "0x1p+00"},
-		{FromFloat64(0x1.7p0), 'x', 0, "0x1p+00"},
-		{FromFloat64(0x1.8p0), 'x', 0, "0x1p+01"},
+		{exact(0), 'x', 0, "0x0p+00"},
+		{exact(0x1.0p0), 'x', 0, "0x1p+00"},
+		{exact(0x1.7p0), 'x', 0, "0x1p+00"},
+		{exact(0x1.8p0), 'x', 0, "0x1p+01"},
 
-		{FromFloat64(0x0.0p0), 'x', 1, "0x0.0p+00"},
-		{FromFloat64(0x1.0p0), 'x', 1, "0x1.0p+00"},
-		{FromFloat64(0x1.fp0), 'x', 1, "0x1.fp+00"},
-		{FromFloat64(0x1.ffc0p0), 'x', 1, "0x1.0p+01"},
-		{FromFloat64(0x1.08p0), 'x', 1, "0x1.0p+00"},
-		{FromFloat64(0x1.18p0), 'x', 1, "0x1.2p+00"},
+		{exact(0x0.0p0), 'x', 1, "0x0.0p+00"},
+		{exact(0x1.0p0), 'x', 1, "0x1.0p+00"},
+		{exact(0x1.fp0), 'x', 1, "0x1.fp+00"},
+		{exact(0x1.ffc0p0), 'x', 1, "0x1.0p+01"},
+		{exact(0x1.08p0), 'x', 1, "0x1.0p+00"},
+		{exact(0x1.18p0), 'x', 1, "0x1.2p+00"},
 
-		{FromFloat64(0x0.00p0), 'x', 2, "0x0.00p+00"},
-		{FromFloat64(0x1.00p0), 'x', 2, "0x1.00p+00"},
-		{FromFloat64(0x1.0fp0), 'x', 2, "0x1.0fp+00"},
-		{FromFloat64(0x1.ffc0p0), 'x', 2, "0x1.00p+01"},
-		{FromFloat64(0x1.008p0), 'x', 2, "0x1.00p+00"},
-		{FromFloat64(0x1.018p0), 'x', 2, "0x1.02p+00"},
+		{exact(0x0.00p0), 'x', 2, "0x0.00p+00"},
+		{exact(0x1.00p0), 'x', 2, "0x1.00p+00"},
+		{exact(0x1.0fp0), 'x', 2, "0x1.0fp+00"},
+		{exact(0x1.ffc0p0), 'x', 2, "0x1.00p+01"},
+		{exact(0x1.008p0), 'x', 2, "0x1.00p+00"},
+		{exact(0x1.018p0), 'x', 2, "0x1.02p+00"},
 
-		{FromFloat64(0x0.000p0), 'x', 3, "0x0.000p+00"},
-		{FromFloat64(0x1.000p0), 'x', 3, "0x1.000p+00"},
-		{FromFloat64(0x1.00c0p0), 'x', 3, "0x1.00cp+00"},
-		{FromFloat64(0x1.ffc0p0), 'x', 3, "0x1.ffcp+00"},
+		{exact(0x0.000p0), 'x', 3, "0x0.000p+00"},
+		{exact(0x1.000p0), 'x', 3, "0x1.000p+00"},
+		{exact(0x1.00c0p0), 'x', 3, "0x1.00cp+00"},
+		{exact(0x1.ffc0p0), 'x', 3, "0x1.ffcp+00"},
 
-		{FromFloat64(0x1.ffc0p0), 'x', 4, "0x1.ffc0p+00"},
-		{FromFloat64(0x1p-24), 'x', 4, "0x1.0000p-24"},
+		{exact(0x1.ffc0p0), 'x', 4, "0x1.ffc0p+00"},
+		{exact(0x1p-24), 'x', 4, "0x1.0000p-24"},
 
-		{FromFloat64(0x1p0), 'x', -1, "0x1p+00"},
-		{FromFloat64(0x1.8p0), 'x', -1, "0x1.8p+00"},
-		{FromFloat64(0x1.08p0), 'x', -1, "0x1.08p+00"},
-		{FromFloat64(0x1.00cp0), 'x', -1, "0x1.00cp+00"},
+		{exact(0x1p0), 'x', -1, "0x1p+00"},
+		{exact(0x1.8p0), 'x', -1, "0x1.8p+00"},
+		{exact(0x1.08p0), 'x', -1, "0x1.08p+00"},
+		{exact(0x1.00cp0), 'x', -1, "0x1.00cp+00"},
 
 		{0, 'X', -1, "0X0P+00"},
 		{0x8000, 'X', -1, "-0X0P+00"},
 		{Inf(1), 'X', -1, "+Inf"},
 		{Inf(-1), 'X', -1, "-Inf"},
 		{NaN(), 'X', -1, "NaN"},
-		{FromFloat64(0x1.ffc0p0), 'X', 3, "0X1.FFCP+00"},
+		{exact(0x1.ffc0p0), 'X', 3, "0X1.FFCP+00"},
 	}
 
 	for _, tt := range tests {
@@ -248,6 +362,53 @@ func TestText(t *testing.T) {
 			t.Errorf("%#v: expected %s, got %s", tt, tt.s, got)
 		}
 	}
+}
+
+func TestString_RoundTrip(t *testing.T) {
+	for i := 0; i < 0x10000; i++ {
+		f := FromBits(uint16(i))
+		str := f.String()
+		got, err := Parse(str)
+		if err != nil {
+			t.Errorf("%04x: expected no error, got %v", i, err)
+		}
+		if got.IsNaN() && f.IsNaN() {
+			continue
+		}
+		if got != f {
+			t.Errorf("%04x: expected %v, got %v", i, f, got)
+		}
+	}
+}
+
+func FuzzParse(f *testing.F) {
+	f.Add("0")
+	f.Add("-0")
+	f.Add("+Inf")
+	f.Add("-Inf")
+	f.Add("NaN")
+	f.Add("1")
+	f.Add("1.0009765625")
+	f.Add("1.00048828125")
+
+	f.Fuzz(func(t *testing.T, s string) {
+		x0, err := Parse(s)
+		if err != nil {
+			return
+		}
+		s1 := x0.String()
+
+		x1, err := Parse(s1)
+		if err != nil {
+			t.Errorf("expected no error, got %v", err)
+		}
+		if x0.IsNaN() && x1.IsNaN() {
+			return
+		}
+		if x0 != x1 {
+			t.Errorf("expected %v, got %v", x0, x1)
+		}
+	})
 }
 
 func FuzzFormat(f *testing.F) {
