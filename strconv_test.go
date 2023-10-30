@@ -101,6 +101,24 @@ func TestParse(t *testing.T) {
 	}
 }
 
+func TestParse_overflow(t *testing.T) {
+	test := []string{
+		"65520",
+		"6.552e4",
+		"0x1.ffep+15",
+	}
+
+	for _, tt := range test {
+		got, err := Parse(tt)
+		if err == nil {
+			t.Errorf("%q: expected overflow error, but nil", tt)
+		}
+		if got != uvinf {
+			t.Errorf("%q: expected +Inf, got %x", tt, got)
+		}
+	}
+}
+
 func TestString(t *testing.T) {
 	tests := []struct {
 		x Float16

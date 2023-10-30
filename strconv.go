@@ -251,7 +251,7 @@ func (d *decimal) floatBits() (b uint16, overflow bool) {
 overflow:
 	// ±Inf
 	mant = 0
-	exp = mask16
+	exp = mask16 - bias16
 	overflow = true
 
 out:
@@ -412,7 +412,7 @@ loop:
 //
 // based on https://github.com/golang/go/blob/8c92897e15d15fbc664cd5a05132ce800cf4017f/src/strconv/atof.go#L494-L562
 func atofHex(s string, mantissa uint64, exp int, neg, trunc bool) (Float16, error) {
-	// maxExp := (mask16 + 1) + bias16 - 2
+	maxExp := mask16 - bias16 - 1
 	minExp := -bias16 + 1
 	exp += int(shift16) // mantissa now implicitly divided by 2^shift16.
 
@@ -459,12 +459,19 @@ func atofHex(s string, mantissa uint64, exp int, neg, trunc bool) (Float16, erro
 		exp = -bias16
 	}
 
+	var err error
+	if exp > maxExp {
+		mantissa = 0
+		exp = mask16 - bias16
+		err = errors.New("float16: overflow")
+	}
+
 	bits := mantissa & fracMask16
 	bits |= (uint64(exp+bias16) & mask16) << shift16
 	if neg {
 		bits |= signMask16
 	}
-	return Float16(bits), nil
+	return Float16(bits), err
 }
 
 func atof16(s string) (f Float16, n int, err error) {
