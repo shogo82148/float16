@@ -39,7 +39,11 @@ func TestParse(t *testing.T) {
 		{"32", exact(32)},
 		{"64", exact(64)},
 		{"128", exact(128)},
-		{"65504", exact(65504)},
+		{"65504", exact(65504)}, // maximum finite value
+
+		// 65519 is greater than the maximum finite value 65504 but it's ok.
+		// because it round down to 65504.
+		{"65519", exact(65504)},
 
 		// less than one
 		{"0.5", exact(0.5)},
@@ -61,9 +65,29 @@ func TestParse(t *testing.T) {
 		{"1.00146484375", exact(1.001953125)},
 
 		// hexadecimal
-		// {"0x1p0", exact(1)},
-		{"0x1p-14", exact(0x1p-14)}, // minimum nominal
-		// {"0x1p-24", exact(0x1p-14)}, // minimum subnormal greater than zero
+		{"0x1p0", exact(1)},
+		{"0x1.ffc0p+15", exact(65504)},
+		{"0x1.ffcfp+15", exact(65504)}, // round down
+		{"0x1p-14", exact(0x1p-14)},    // minimum nominal
+		{"0x1p-24", exact(0x1p-24)},    // minimum subnormal greater than zero
+
+		// test rounding
+		{"0x1.000p0", exact(0x1.000p0)},
+		{"0x1.001p0", exact(0x1.000p0)},
+		{"0x1.002p0", exact(0x1.000p0)},
+		{"0x1.003p0", exact(0x1.004p0)},
+		{"0x1.004p0", exact(0x1.004p0)},
+		{"0x1.005p0", exact(0x1.004p0)},
+		{"0x1.006p0", exact(0x1.008p0)},
+		{"0x1.007p0", exact(0x1.008p0)},
+		{"0x1.008p0", exact(0x1.008p0)},
+		{"0x1.009p0", exact(0x1.008p0)},
+		{"0x1.00ap0", exact(0x1.008p0)},
+		{"0x1.00bp0", exact(0x1.00cp0)},
+		{"0x1.00cp0", exact(0x1.00cp0)},
+		{"0x1.00dp0", exact(0x1.00cp0)},
+		{"0x1.00ep0", exact(0x1.010p0)},
+		{"0x1.00fp0", exact(0x1.010p0)},
 	}
 
 	for _, tt := range tests {
@@ -72,7 +96,7 @@ func TestParse(t *testing.T) {
 			t.Errorf("%q: expected no error, got %v", tt.s, err)
 		}
 		if got != tt.x {
-			t.Errorf("%q: expected %v, got %v", tt.s, tt.x, got)
+			t.Errorf("%q: expected %x, got %x", tt.s, tt.x, got)
 		}
 	}
 }

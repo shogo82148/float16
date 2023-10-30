@@ -413,7 +413,7 @@ loop:
 // based on https://github.com/golang/go/blob/8c92897e15d15fbc664cd5a05132ce800cf4017f/src/strconv/atof.go#L494-L562
 func atofHex(s string, mantissa uint64, exp int, neg, trunc bool) (Float16, error) {
 	// maxExp := (mask16 + 1) + bias16 - 2
-	// minExp := bias16 + 1
+	minExp := -bias16 + 1
 	exp += int(shift16) // mantissa now implicitly divided by 2^shift16.
 
 	// Shift mantissa and exponent to bring representation into float range.
@@ -434,6 +434,14 @@ func atofHex(s string, mantissa uint64, exp int, neg, trunc bool) (Float16, erro
 		exp++
 	}
 
+	// If exponent is too negative,
+	// denormalize in hopes of making it representable.
+	// (The -2 is for the rounding bits.)
+	for mantissa > 1 && exp < minExp-2 {
+		mantissa = mantissa>>1 | mantissa&1
+		exp++
+	}
+
 	// Round using two bottom bits.
 	round := mantissa & 3
 	mantissa >>= 2
@@ -445,6 +453,10 @@ func atofHex(s string, mantissa uint64, exp int, neg, trunc bool) (Float16, erro
 			mantissa >>= 1
 			exp++
 		}
+	}
+
+	if mantissa>>shift16 == 0 { // subnormal or zero
+		exp = -bias16
 	}
 
 	bits := mantissa & fracMask16
