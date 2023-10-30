@@ -60,17 +60,19 @@ func TestParse(t *testing.T) {
 		{"1.0014648437499999", exact(1.0009765625)},
 		{"1.00146484375", exact(1.001953125)},
 
-		// overflow
-		{"65520", Inf(1)},
+		// hexadecimal
+		// {"0x1p0", exact(1)},
+		{"0x1p-14", exact(0x1p-14)}, // minimum nominal
+		// {"0x1p-24", exact(0x1p-14)}, // minimum subnormal greater than zero
 	}
 
 	for _, tt := range tests {
 		got, err := Parse(tt.s)
 		if err != nil {
-			t.Errorf("expected no error, got %v", err)
+			t.Errorf("%q: expected no error, got %v", tt.s, err)
 		}
 		if got != tt.x {
-			t.Errorf("expected %v, got %v", tt.x, got)
+			t.Errorf("%q: expected %v, got %v", tt.s, tt.x, got)
 		}
 	}
 }

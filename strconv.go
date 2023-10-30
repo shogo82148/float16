@@ -406,6 +406,55 @@ loop:
 	return
 }
 
+// atofHex converts the hex floating-point string s
+// The string s has already been parsed into a mantissa, exponent, and sign (neg==true for negative).
+// If trunc is true, trailing non-zero bits have been omitted from the mantissa.
+//
+// based on https://github.com/golang/go/blob/8c92897e15d15fbc664cd5a05132ce800cf4017f/src/strconv/atof.go#L494-L562
+func atofHex(s string, mantissa uint64, exp int, neg, trunc bool) (Float16, error) {
+	// maxExp := (mask16 + 1) + bias16 - 2
+	// minExp := bias16 + 1
+	exp += int(shift16) // mantissa now implicitly divided by 2^shift16.
+
+	// Shift mantissa and exponent to bring representation into float range.
+	// Eventually we want a mantissa with a leading 1-bit followed by mantbits other bits.
+	// For rounding, we need two more, where the bottom bit represents
+	// whether that bit or any later bit was non-zero.
+	// (If the mantissa has already lost non-zero bits, trunc is true,
+	// and we OR in a 1 below after shifting left appropriately.)
+	for mantissa != 0 && mantissa>>(shift16+2) == 0 {
+		mantissa <<= 1
+		exp--
+	}
+	if trunc {
+		mantissa |= 1
+	}
+	for mantissa>>(1+shift16+2) != 0 {
+		mantissa = mantissa>>1 | mantissa&1
+		exp++
+	}
+
+	// Round using two bottom bits.
+	round := mantissa & 3
+	mantissa >>= 2
+	round |= mantissa & 1 // round to even (round up if mantissa is odd)
+	exp += 2
+	if round == 3 {
+		mantissa++
+		if mantissa == 1<<(1+shift16) {
+			mantissa >>= 1
+			exp++
+		}
+	}
+
+	bits := mantissa & fracMask16
+	bits |= (uint64(exp+bias16) & mask16) << shift16
+	if neg {
+		bits |= signMask16
+	}
+	return Float16(bits), nil
+}
+
 func atof16(s string) (f Float16, n int, err error) {
 	if val, n, ok := special(s); ok {
 		return val, n, nil
@@ -417,11 +466,8 @@ func atof16(s string) (f Float16, n int, err error) {
 	}
 
 	if hex {
-		_ = mantissa
-		_ = exp
-		_ = neg
-		_ = trunc
-		return 0, n, errors.New("TODO: implement")
+		f, err = atofHex(s, mantissa, exp, neg, trunc)
+		return f, n, err
 	}
 
 	var d decimal
