@@ -63,6 +63,8 @@ func TestParse(t *testing.T) {
 		{"1.0014648437499999", exact(1.0009765625)},
 		{"1.00146484375", exact(1.001953125)},
 
+		{"7.81e-03", exact(0x1p-7)},
+
 		// hexadecimal
 		{"0x1p0", exact(1)},
 		{"0x1.ffc0p+15", exact(65504)},

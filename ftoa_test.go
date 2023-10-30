@@ -126,6 +126,9 @@ func TestText(t *testing.T) {
 		{0x2ac3, 'e', -1, "5.283e-02"},
 		{0xe6d6, 'e', -1, "-1.75e+03"},
 		{0x700f, 'e', -1, "8.31e+03"},
+		{0x2000, 'e', -1, "7.81e-03"},
+		{0x6c03, 'e', -1, "4.108e+03"},
+		{0xf257, 'e', -1, "-1.2984e+04"},
 
 		{0, 'E', -1, "0E+00"},
 		{0x8000, 'E', -1, "-0E+00"},
@@ -277,7 +280,7 @@ func TestText_RoundTrip(t *testing.T) {
 				continue
 			}
 			if got != f {
-				t.Errorf("Format(%x, %c) = %q: expected %v, got %v", i, fmt, str, f, got)
+				t.Errorf("Format(%x, %c) = %q: expected %g, got %g", i, fmt, str, f.Float64(), got.Float64())
 			}
 		}
 	}

@@ -360,7 +360,7 @@ func (x Float16) appendSci(buf []byte, fmt byte, prec int) []byte {
 	var dec25 int128.Uint128
 	for ; n > 0; n-- {
 		dec25 = roundUint128(exact, n)
-		if dec25.Cmp(lower) >= 0 && dec25.Cmp(upper) <= 0 {
+		if dec25.Cmp(lower) > 0 && dec25.Cmp(upper) < 0 {
 			break
 		}
 	}
