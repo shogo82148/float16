@@ -63,6 +63,11 @@ func TestParse(t *testing.T) {
 		{"1.0014648437499999", exact(1.0009765625)},
 		{"1.00146484375", exact(1.001953125)},
 
+		{"7.812e-03", exact(0x1p-7)},
+		{"1.5625e-02", exact(0x1p-6)},
+		{"0.007812", exact(0x1p-7)},
+		{"0.015625", exact(0x1p-6)},
+
 		// hexadecimal
 		{"0x1p0", exact(1)},
 		{"0x1.ffc0p+15", exact(65504)},
@@ -116,4 +121,34 @@ func TestParse_overflow(t *testing.T) {
 			t.Errorf("%q: expected +Inf, got %x", tt, got)
 		}
 	}
+}
+
+func FuzzParse(f *testing.F) {
+	f.Add("0")
+	f.Add("-0")
+	f.Add("+Inf")
+	f.Add("-Inf")
+	f.Add("NaN")
+	f.Add("1")
+	f.Add("1.0009765625")
+	f.Add("1.00048828125")
+
+	f.Fuzz(func(t *testing.T, s string) {
+		x0, err := Parse(s)
+		if err != nil {
+			return
+		}
+		s1 := x0.String()
+
+		x1, err := Parse(s1)
+		if err != nil {
+			t.Errorf("expected no error, got %v", err)
+		}
+		if x0.IsNaN() && x1.IsNaN() {
+			return
+		}
+		if x0 != x1 {
+			t.Errorf("expected %v, got %v", x0, x1)
+		}
+	})
 }

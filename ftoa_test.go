@@ -126,6 +126,12 @@ func TestText(t *testing.T) {
 		{0x2ac3, 'e', -1, "5.283e-02"},
 		{0xe6d6, 'e', -1, "-1.75e+03"},
 		{0x700f, 'e', -1, "8.31e+03"},
+		{0x2000, 'e', -1, "7.812e-03"},
+		{0x2400, 'e', -1, "1.5625e-02"},
+		{0xa000, 'e', -1, "-7.812e-03"},
+		{0xa400, 'e', -1, "-1.5625e-02"},
+		{0x6c03, 'e', -1, "4.108e+03"},
+		{0xf257, 'e', -1, "-1.2984e+04"},
 
 		{0, 'E', -1, "0E+00"},
 		{0x8000, 'E', -1, "-0E+00"},
@@ -195,6 +201,10 @@ func TestText(t *testing.T) {
 		{0x2ac3, 'f', -1, "0.05283"},
 		{0xe6d6, 'f', -1, "-1750"},
 		{0x700f, 'f', -1, "8312"},
+		{0x2000, 'f', -1, "0.007812"},
+		{0x2400, 'f', -1, "0.015625"},
+		{0xa000, 'f', -1, "-0.007812"},
+		{0xa400, 'f', -1, "-0.015625"},
 
 		/******* alternate formats *******/
 		{0, 'g', -1, "0"},
@@ -264,32 +274,21 @@ func TestText(t *testing.T) {
 	}
 }
 
-func FuzzParse(f *testing.F) {
-	f.Add("0")
-	f.Add("-0")
-	f.Add("+Inf")
-	f.Add("-Inf")
-	f.Add("NaN")
-	f.Add("1")
-	f.Add("1.0009765625")
-	f.Add("1.00048828125")
-
-	f.Fuzz(func(t *testing.T, s string) {
-		x0, err := Parse(s)
-		if err != nil {
-			return
+func TestText_RoundTrip(t *testing.T) {
+	for i := 0; i < 0x10000; i++ {
+		for _, fmt := range []byte{'e', 'f', 'g', 'x'} {
+			f := FromBits(uint16(i))
+			str := f.Text(fmt, -1)
+			got, err := Parse(str)
+			if err != nil {
+				t.Errorf("Format(%x, %c) = %q: expected no error, got %v", i, fmt, str, err)
+			}
+			if got.IsNaN() && f.IsNaN() {
+				continue
+			}
+			if got != f {
+				t.Errorf("Format(%x, %c) = %q: expected %g, got %g", i, fmt, str, f.Float64(), got.Float64())
+			}
 		}
-		s1 := x0.String()
-
-		x1, err := Parse(s1)
-		if err != nil {
-			t.Errorf("expected no error, got %v", err)
-		}
-		if x0.IsNaN() && x1.IsNaN() {
-			return
-		}
-		if x0 != x1 {
-			t.Errorf("expected %v, got %v", x0, x1)
-		}
-	})
+	}
 }
