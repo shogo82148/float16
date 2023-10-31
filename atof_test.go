@@ -3,6 +3,7 @@ package float16
 import (
 	"cmp"
 	"fmt"
+	"strconv"
 	"testing"
 )
 
@@ -117,8 +118,59 @@ func TestParse_overflow(t *testing.T) {
 		if err == nil {
 			t.Errorf("%q: expected overflow error, but nil", tt)
 		}
+		if numErr, ok := err.(*strconv.NumError); !ok {
+			t.Errorf("%q: expected strconv.NumError, got %T", tt, err)
+		} else {
+			if numErr.Err != strconv.ErrRange {
+				t.Errorf("%q: expected strconv.ErrRange, got %v", tt, numErr.Err)
+			}
+			if numErr.Num != tt {
+				t.Errorf("%q: expected %q, got %q", tt, tt, numErr.Num)
+			}
+			if numErr.Func != "float16.Parse" {
+				t.Errorf("%q: expected float16.Parse, got %q", tt, numErr.Func)
+			}
+		}
 		if got != uvinf {
 			t.Errorf("%q: expected +Inf, got %x", tt, got)
+		}
+	}
+}
+
+func TestParse_SyntaxError(t *testing.T) {
+	tests := []string{
+		"",
+		" ",
+		"NaN.0",
+		"0x",
+		"0x.",
+		"0x.p",
+		"0x.0p",
+		"0x.0p+",
+		"0x.0p-",
+		"0x0p",
+		"0x0p+",
+		"0x0p-",
+	}
+
+	for _, tt := range tests {
+		_, err := Parse(tt)
+		if err == nil {
+			t.Errorf("%q: expected syntax error, but nil", tt)
+			continue
+		}
+		if numErr, ok := err.(*strconv.NumError); !ok {
+			t.Errorf("%q: expected strconv.NumError, got %T", tt, err)
+		} else {
+			if numErr.Err != strconv.ErrSyntax {
+				t.Errorf("%q: expected strconv.ErrSyntax, got %v", tt, numErr.Err)
+			}
+			if numErr.Num != tt {
+				t.Errorf("%q: expected %q, got %q", tt, tt, numErr.Num)
+			}
+			if numErr.Func != "float16.Parse" {
+				t.Errorf("%q: expected float16.Parse, got %q", tt, numErr.Func)
+			}
 		}
 	}
 }
