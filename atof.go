@@ -3,7 +3,6 @@
 package float16
 
 import (
-	"errors"
 	"strconv"
 )
 
@@ -480,7 +479,7 @@ func atof16(s string) (f Float16, n int, err error) {
 
 	mantissa, exp, neg, trunc, hex, n, ok := readFloat(s)
 	if !ok {
-		return 0, n, errors.New("float16: invalid syntax")
+		return 0, n, &strconv.NumError{Func: "float16.Parse", Num: s, Err: strconv.ErrSyntax}
 	}
 
 	if hex {
@@ -490,7 +489,7 @@ func atof16(s string) (f Float16, n int, err error) {
 
 	var d decimal
 	if !d.set(s[:n]) {
-		return 0, n, errors.New("float16: invalid syntax")
+		return 0, n, &strconv.NumError{Func: "float16.Parse", Num: s, Err: strconv.ErrSyntax}
 	}
 	b, ovf := d.floatBits()
 	f = Float16(b)
@@ -503,7 +502,7 @@ func atof16(s string) (f Float16, n int, err error) {
 func Parse(s string) (Float16, error) {
 	f, n, err := atof16(s)
 	if n != len(s) && (err == nil || err.(*strconv.NumError).Err != strconv.ErrSyntax) {
-		return 0, errors.New("float16: invalid syntax")
+		return 0, &strconv.NumError{Func: "float16.Parse", Num: s, Err: strconv.ErrSyntax}
 	}
 	return f, err
 }
