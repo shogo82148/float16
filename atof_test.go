@@ -3,6 +3,7 @@ package float16
 import (
 	"cmp"
 	"fmt"
+	"strconv"
 	"testing"
 )
 
@@ -116,6 +117,19 @@ func TestParse_overflow(t *testing.T) {
 		got, err := Parse(tt)
 		if err == nil {
 			t.Errorf("%q: expected overflow error, but nil", tt)
+		}
+		if numErr, ok := err.(*strconv.NumError); !ok {
+			t.Errorf("%q: expected strconv.NumError, got %T", tt, err)
+		} else {
+			if numErr.Err != strconv.ErrRange {
+				t.Errorf("%q: expected strconv.ErrRange, got %v", tt, numErr.Err)
+			}
+			if numErr.Num != tt {
+				t.Errorf("%q: expected %q, got %q", tt, tt, numErr.Num)
+			}
+			if numErr.Func != "float16.Parse" {
+				t.Errorf("%q: expected float16.Parse, got %q", tt, numErr.Func)
+			}
 		}
 		if got != uvinf {
 			t.Errorf("%q: expected +Inf, got %x", tt, got)

@@ -462,7 +462,7 @@ func atofHex(s string, mantissa uint64, exp int, neg, trunc bool) (Float16, erro
 	if exp > maxExp {
 		mantissa = 0
 		exp = mask16 - bias16
-		err = errors.New("float16: overflow")
+		err = &strconv.NumError{Func: "float16.Parse", Num: s, Err: strconv.ErrRange}
 	}
 
 	bits := mantissa & fracMask16
@@ -495,7 +495,7 @@ func atof16(s string) (f Float16, n int, err error) {
 	b, ovf := d.floatBits()
 	f = Float16(b)
 	if ovf {
-		err = errors.New("float16: overflow")
+		err = &strconv.NumError{Func: "float16.Parse", Num: s, Err: strconv.ErrRange}
 	}
 	return f, n, err
 }
