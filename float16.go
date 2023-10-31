@@ -233,28 +233,3 @@ func (f Float16) split() (sign uint16, exp int32, frac uint16) {
 	}
 	return
 }
-
-func (f Float16) isSignalingNaN() bool {
-	exp := (f >> shift16) & mask16
-	frac := f & fracMask16
-	return exp == mask16 && frac != 0 && frac&0x200 == 0
-}
-
-func (f Float16) isQuietNaN() bool {
-	exp := (f >> shift16) & mask16
-	frac := f & fracMask16
-	return exp == mask16 && frac != 0 && frac&0x200 != 0
-}
-
-func propagateNaN(a, b Float16) Float16 {
-	if a.isSignalingNaN() {
-		return a | 0x0200
-	}
-	if b.isSignalingNaN() {
-		return b | 0x0200
-	}
-	if a.isQuietNaN() {
-		return a | 0x0200
-	}
-	return b | 0x0200
-}

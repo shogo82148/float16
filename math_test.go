@@ -247,7 +247,7 @@ func TestMul_TestFloat(t *testing.T) {
 		fa := tt.a
 		fb := tt.b
 		got := fa.Mul(fb)
-		if got != tt.want {
+		if got.Compare(tt.want) != 0 {
 			t.Errorf("%x * %x: expected %x, got %x", tt.a, tt.b, tt.want, got)
 		}
 	}
@@ -276,7 +276,7 @@ func TestMul_All(t *testing.T) {
 		fb := Float16(b)
 		fc := fa.Mul(fb)
 		if fc.IsNaN() {
-			return NaN().Bits()
+			return uvnan
 		}
 		return fc.Bits()
 	}
@@ -286,7 +286,7 @@ func TestMul_All(t *testing.T) {
 		fb := Float16(b).Float64()
 		fc := fa * fb // This calculation does not cause any rounding.
 		if math.IsNaN(fc) {
-			return NaN().Bits()
+			return uvnan
 		}
 		return FromFloat64(fc).Bits()
 	}
@@ -366,7 +366,7 @@ func TestQuo_TestFloat(t *testing.T) {
 		fa := tt.a
 		fb := tt.b
 		got := fa.Quo(fb)
-		if got != tt.want {
+		if got.Compare(tt.want) != 0 {
 			t.Errorf("%x / %x: expected %x, got %x", tt.a, tt.b, tt.want, got)
 		}
 	}
@@ -378,7 +378,7 @@ func TestQuo_All(t *testing.T) {
 		fb := Float16(b)
 		fc := fa.Quo(fb)
 		if fc.IsNaN() {
-			return NaN().Bits()
+			return uvnan
 		}
 		return fc.Bits()
 	}
@@ -391,7 +391,7 @@ func TestQuo_All(t *testing.T) {
 			// big.Float can't handle these special cases.
 			fc := FromFloat64(fa / fb)
 			if fc.IsNaN() {
-				return NaN().Bits()
+				return uvnan
 			}
 			return fc.Bits()
 		}
@@ -474,7 +474,7 @@ func TestAdd_TestFloat(t *testing.T) {
 		fa := tt.a
 		fb := tt.b
 		got := fa.Add(fb)
-		if got != tt.want {
+		if got.Compare(tt.want) != 0 {
 			t.Errorf("%x + %x: expected %x, got %x", tt.a, tt.b, tt.want, got)
 		}
 	}
@@ -486,7 +486,7 @@ func TestAdd_All(t *testing.T) {
 		fb := Float16(b)
 		fc := fa.Add(fb)
 		if fc.IsNaN() {
-			return NaN().Bits()
+			return uvnan
 		}
 		return fc.Bits()
 	}
@@ -496,7 +496,7 @@ func TestAdd_All(t *testing.T) {
 		fb := Float16(b).Float64()
 		fc := fa + fb // This calculation does not cause any rounding.
 		if math.IsNaN(fc) {
-			return NaN().Bits()
+			return uvnan
 		}
 		return FromFloat64(fc).Bits()
 	}
@@ -521,7 +521,7 @@ func BenchmarkAdd2(b *testing.B) {
 	}
 }
 
-func TestCmp(t *testing.T) {
+func TestCompare(t *testing.T) {
 	tests := []struct {
 		a, b float64
 	}{

@@ -10,7 +10,7 @@ func (a Float16) Mul(b Float16) Float16 {
 	if a.IsNaN() || b.IsNaN() {
 		// anything * NaN = NaN
 		// NaN * anything = NaN
-		return propagateNaN(a, b)
+		return uvnan
 	}
 
 	signA := a & signMask16
@@ -101,7 +101,7 @@ func (a Float16) Quo(b Float16) Float16 {
 	if a.IsNaN() || b.IsNaN() {
 		// anything / NaN = NaN
 		// NaN / anything = NaN
-		return propagateNaN(a, b)
+		return uvnan
 	}
 
 	signA := a & signMask16
@@ -209,7 +209,7 @@ func (a Float16) Add(b Float16) Float16 {
 	if a.IsNaN() || b.IsNaN() {
 		// anything + NaN = NaN
 		// NaN + anything = NaN
-		return propagateNaN(a, b)
+		return uvnan
 	}
 	if a^signMask16 == 0 { // a is ±0
 		return b
@@ -400,24 +400,7 @@ func (a Float16) Ge(b Float16) bool {
 // (That is, FMA returns the fused multiply-add of x, y, and z.)
 func FMA(x, y, z Float16) Float16 {
 	if x.IsNaN() || y.IsNaN() || z.IsNaN() {
-		if x.isSignalingNaN() {
-			return x | 0x2000
-		}
-		if y.isSignalingNaN() {
-			return y | 0x2000
-		}
-		if z.isSignalingNaN() {
-			return z | 0x2000
-		}
-		if z.isQuietNaN() {
-			return z | 0x2000
-		}
-		if x.isQuietNaN() {
-			return x | 0x2000
-		}
-		if y.isQuietNaN() {
-			return y | 0x2000
-		}
+		return uvnan
 	}
 
 	fx := x.Float64()
