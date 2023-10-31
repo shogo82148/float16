@@ -165,6 +165,7 @@ func (x Float16) appendDec(buf []byte, fmt byte, prec int) []byte {
 		return buf
 	}
 
+	// find the intermediate value between two adjacent floating-point numbers.
 	var exact, lower, upper int128.Uint128
 	exp := int(x >> shift16 & mask16)
 	frac := uint64(x & fracMask16)
@@ -179,7 +180,12 @@ func (x Float16) appendDec(buf []byte, fmt byte, prec int) []byte {
 	} else {
 		// normal number
 		exact.L = (frac | (1 << shift16)) << exp
-		lower.L = exact.L - (1 << (exp - 1))
+		if frac&(frac-1) == 0 && exp > 1 {
+			// frac is power of 2
+			lower.L = exact.L - (1 << (exp - 2))
+		} else {
+			lower.L = exact.L - (1 << (exp - 1))
+		}
 		upper.L = exact.L + (1 << (exp - 1))
 	}
 
@@ -333,6 +339,7 @@ func (x Float16) appendSci(buf []byte, fmt byte, prec int) []byte {
 		return buf
 	}
 
+	// find the intermediate value between two adjacent floating-point numbers.
 	var exact, lower, upper int128.Uint128
 	exp := int(x >> shift16 & mask16)
 	frac := uint64(x & fracMask16)
@@ -347,7 +354,12 @@ func (x Float16) appendSci(buf []byte, fmt byte, prec int) []byte {
 	} else {
 		// normal number
 		exact.L = (frac | (1 << shift16)) << exp
-		lower.L = exact.L - (1 << (exp - 1))
+		if frac&(frac-1) == 0 && exp > 1 {
+			// frac is power of 2
+			lower.L = exact.L - (1 << (exp - 2))
+		} else {
+			lower.L = exact.L - (1 << (exp - 1))
+		}
 		upper.L = exact.L + (1 << (exp - 1))
 	}
 
