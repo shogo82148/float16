@@ -6,6 +6,11 @@ var _ fmt.Formatter = Float16(0)
 
 // Format implements [fmt.Formatter].
 func (x Float16) Format(s fmt.State, verb rune) {
+	if x.IsNaN() {
+		s.Write([]byte("NaN"))
+		return
+	}
+
 	var prefix []byte
 	var data []byte
 
