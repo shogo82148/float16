@@ -4,7 +4,6 @@ package float16
 
 import (
 	"math/bits"
-	"strconv"
 
 	"github.com/shogo82148/int128"
 )
@@ -15,6 +14,18 @@ func (x Float16) String() string {
 
 func (x Float16) Text(fmt byte, prec int) string {
 	return string(x.Append(make([]byte, 0, 8), fmt, prec))
+}
+
+var formatFRange = []struct{ upper, lower Float16 }{
+	{0x4900, 0x3bff}, // (1e+01, 9.995e-01)
+	{0x4900, 0x3bff}, // (1e+01, 9.995e-01)
+	{0x5640, 0x2e65}, // (1e+02, 9.99e-02)
+	{0x63d0, 0x211e}, // (1e+03, 9.995e-03)
+	{0x70e2, 0x1418}, // (1e+04, 9.99e-04)
+	{uvinf, 0x068d},  // (+Inf, 9.996e-05)
+	{uvinf, 0x00a7},  // (+Inf, 9.95e-06)
+	{uvinf, 0x0010},  // (+Inf, 9.5e-07)
+	{uvinf, 0x0001},  // (+Inf, 6e-08)
 }
 
 func (x Float16) Append(buf []byte, fmt byte, prec int) []byte {
@@ -36,10 +47,25 @@ func (x Float16) Append(buf []byte, fmt byte, prec int) []byte {
 		return x.appendDec(buf, fmt, prec)
 	case 'e', 'E':
 		return x.appendSci(buf, fmt, prec)
+	case 'g', 'G':
+		if x&signMask16 != 0 {
+			buf = append(buf, '-')
+		}
+		x = x &^ signMask16
+		if x == 0 {
+			return append(buf, '0')
+		}
+		n := prec
+		if n < 0 {
+			n = 6
+		}
+		if n < len(formatFRange) && (x <= formatFRange[n].lower || x >= formatFRange[n].upper) {
+			return x.appendSci(buf, fmt+'e'-'g', prec-1)
+		}
+		return x.appendDec(buf, fmt, prec)
 	}
 
-	// TODO: shortest representation
-	return strconv.AppendFloat(buf, x.Float64(), fmt, prec, 32)
+	return x.appendDec(buf, fmt, prec)
 }
 
 func (x Float16) appendBin(buf []byte) []byte {
