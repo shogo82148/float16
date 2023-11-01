@@ -36,10 +36,26 @@ func (x Float16) Append(buf []byte, fmt byte, prec int) []byte {
 		return x.appendDec(buf, fmt, prec)
 	case 'e', 'E':
 		return x.appendSci(buf, fmt, prec)
+	case 'g', 'G':
+		if prec >= 0 {
+			// In this case, bitSize is ignored anyway so it's ok to pass.
+			return strconv.AppendFloat(buf, x.Float64(), fmt, prec, 64)
+		}
+
+		if x&signMask16 != 0 {
+			buf = append(buf, '-')
+		}
+		x = x &^ signMask16
+		if x == 0 {
+			return append(buf, '0')
+		}
+		if x <= 0x068d { // 9.996e-05
+			return x.appendSci(buf, fmt+'e'-'g', prec-1)
+		}
+		return x.appendDec(buf, fmt, prec)
 	}
 
-	// TODO: shortest representation
-	return strconv.AppendFloat(buf, x.Float64(), fmt, prec, 32)
+	return x.appendDec(buf, fmt, prec)
 }
 
 func (x Float16) appendBin(buf []byte) []byte {
