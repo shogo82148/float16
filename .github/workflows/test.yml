@@ -33,3 +33,5 @@ jobs:
         with:
           file: ./coverage.txt
           flags: ${{ matrix.go }}
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
