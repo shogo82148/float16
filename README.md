@@ -17,7 +17,7 @@ func main() {
     fmt.Printf("%f + %f = %f", a.Add(b))
     fmt.Printf("%f - %f = %f", a.Sub(b))
     fmt.Printf("%f * %f = %f", a.Mul(b))
-    fmt.Printf("%f / %f = %f", a.Div(b))
+    fmt.Printf("%f / %f = %f", a.Quo(b))
 }
 ```
 
