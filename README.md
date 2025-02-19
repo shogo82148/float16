@@ -8,16 +8,22 @@ The float16 package provides types for handling half-precision floating-point nu
 ## Synopsis
 
 ```go
-import "github.com/shogo82148/float16"
+package main
+
+import (
+	"fmt"
+
+	"github.com/shogo82148/float16"
+)
 
 func main() {
-    a := float16.FromFloat64(1.0)
-    b := float16.FromFloat64(2.0)
+	a := float16.FromFloat64(1.0)
+	b := float16.FromFloat64(2.0)
 
-    fmt.Printf("%f + %f = %f", a.Add(b))
-    fmt.Printf("%f - %f = %f", a.Sub(b))
-    fmt.Printf("%f * %f = %f", a.Mul(b))
-    fmt.Printf("%f / %f = %f", a.Quo(b))
+	fmt.Printf("%f + %f = %f\n", a, b, a.Add(b))
+	fmt.Printf("%f - %f = %f\n", a, b, a.Sub(b))
+	fmt.Printf("%f * %f = %f\n", a, b, a.Mul(b))
+	fmt.Printf("%f / %f = %f\n", a, b, a.Quo(b))
 }
 ```
 
