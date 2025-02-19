@@ -10,6 +10,9 @@ jobs:
       fail-fast: false
       matrix:
         go:
+          - "1.24"
+          - "1.23"
+          - "1.22"
           - "1.21"
         arch:
           - amd64
@@ -31,7 +34,6 @@ jobs:
       - name: upload coverage
         uses: codecov/codecov-action@v5
         with:
-          file: ./coverage.txt
           flags: ${{ matrix.go }}
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
