@@ -1,3 +1,5 @@
+**This project is no longer maintained!** use [shogo82148/floats](https://github.com/shogo82148/floats) instead of it.
+
 # float16
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/shogo82148/float16.svg)](https://pkg.go.dev/github.com/shogo82148/float16)
